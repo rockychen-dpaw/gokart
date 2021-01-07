@@ -43,7 +43,6 @@
         <div id="layers-catalogue-list">
           <div v-for="l in catalogue.getArray() | filterBy search in searchAttrs | orderBy 'name'" class="row layer-row" @mouseover="preview(l)" track-by="mapLayerId" @mouseleave="preview(false)" style="margin-left:0px;margin-right:0px">
             <div class="small-10">
-              <a v-if="editable(l)" @click.stop.prevent="utils.editResource($event)" title="Edit catalogue entry" href="{{env.catalogueAdminService}}/admin/catalogue/record/{{l.systemid}}/change/" target="{{env.catalogueAdminService}}" class="button tiny secondary float-right short"><i class="fa fa-pencil"></i></a>
               <div class="layer-title">{{ l.name || l.id }}</div>
             </div>
             <div class="small-2">
@@ -148,6 +147,7 @@ div.ol-previewmap.ol-uncollapsible {
       return {
         layer: {},
         catalogue: new ol.Collection(),
+        layers:{},
         swapBaseLayers: true,
         search: '',
         searchAttrs: ['name', 'id', 'tags'],
@@ -168,9 +168,6 @@ div.ol-previewmap.ol-uncollapsible {
       }
     },
     methods: {
-      editable:function(layer) {
-        return layer.systemid && this.whoami.editLayer
-      },  
       adjustHeight:function() {
         if (this.activeMenu === "layers" && this.activeSubmenu === "catalogue") {
             $("#catalogue-list-container").height(this.screenHeight - this.leftPanelHeadHeight - $("#catalogue-filter-container").height())
@@ -262,16 +259,15 @@ div.ol-previewmap.ol-uncollapsible {
         var req = new window.XMLHttpRequest()
         req.withCredentials = true
         req.onload = function () {
-          var checkingLayer = null
           var layers = []
           JSON.parse(this.responseText).forEach(function (l) {
-            // overwrite layers in the catalogue with the same identifier
-            if (vm.getLayer(l.identifier)) {
-                vm.catalogue.remove(vm.getLayer(l.identifier))
+            // overwrite layers in the catalogue with the same id
+            if (vm.getLayer(l.id)) {
+                vm.catalogue.remove(vm.getLayer(l.id))
             }
             
-            l.systemid = l.id;
-            l.id = getIndependentLayerId(l.identifier);
+            l.layerid = l.id;
+            l.id = getIndependentLayerId(l.id);
             // add the base flag for layers tagged 'basemap'
             l.base = l.tags.some(function (t) {return t.name === 'basemap'})
             // set the opacity to 50% for layers tagged 'overlaymap'
@@ -285,23 +281,12 @@ div.ol-previewmap.ol-uncollapsible {
             if (l.tags.some(function (t) { return t.name === 'livemap_2min' })) {
                 l.refresh = 120
             }
-            if (!checkingLayer) {
-                checkingLayer = l
-            }
 
             layers.push(l)
+            vm.layers[l.id] = l
           })
-          if (checkingLayer) { 
-              utils.checkPermission(vm.env.catalogueAdminService + "/admin/catalogue/record/" + checkingLayer.systemid + "/change/","GET",function(allowed){
-                vm.whoami.editLayer = allowed
-                vm.catalogue.extend(layers)
-                callback()
-              })
-          } else {
-              vm.whoami.editLayer = false
-              vm.catalogue.extend(layers)
-              callback()
-          }
+          vm.catalogue.extend(layers)
+          callback()
         }
         req.onerror = function (ev) {
           var msg ='Couldn\'t load layer catalogue!' +  (req.statusText? (" (" + req.statusText + ")") : '')
@@ -311,7 +296,7 @@ div.ol-previewmap.ol-uncollapsible {
             console.error(msg)
           }
         }
-        req.open('GET', vm.env.cswService + "?format=json&application__name=" + getAppId(this.app.toLowerCase()))
+        req.open('GET', vm.env.layers)
         req.send()
       },
       getLayer: function (id) {
@@ -330,18 +315,22 @@ div.ol-previewmap.ol-uncollapsible {
       var catalogueStatus = vm.loading.register("catalogue","Catalogue Component")
       this.catalogue.on('add', function (event) {
         var l = event.element
-        l.id = l.id || l.identifier
         l.name = l.name || l.title
-        l.type = l.type || 'TileLayer'
-        if (l.type === 'TileLayer') {
-          if (l.legend) {
-            if (!(l.legend.toLowerCase().startsWith("http"))) {
-                l.legend = vm.env.catalogueAdminService + l.legend
+        /*
+        if (l.type) {
+            if (l.wmts) {
+                l.type = 'TileLayer'
+            } else if (l.wms) {
+                l.type = "ImageLayer"
+            } else if (l.WFS) {
+                l.type = "WFSLayer"
+            } else {
+                throw "Layer(" + l.id + ") Not Support"
             }
-          } else {
-            l.legend = (l.service_type === "WFS")?(vm.env.legendSrc + getLayerId(l.id)):null
-          }
         }
+        */
+        l.type = l.type || 'TileLayer'
+        l.legend = l.legend || ""
         l.mapLayerId = l.mapLayerId || l.id
         if (l.dependentLayers) {
             $.each(l.dependentLayers,function(index,layer){

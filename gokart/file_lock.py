@@ -186,4 +186,4 @@ class FileLock(object):
         """ Make sure that the FileLock instance doesn't leave a lockfile
             lying around.
         """
-	self.release()
+        self.release()

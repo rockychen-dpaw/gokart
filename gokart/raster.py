@@ -6,13 +6,14 @@ import math
 import traceback
 import datetime
 import os
+import functools
 from osgeo import ogr, osr, gdal
 from affine import Affine
 
 import json
 import bottle
 
-import settings
+from . import settings
 from .jinja2settings import settings as jinja2settings
 from .file_lock import FileLock
 
@@ -168,7 +169,7 @@ def loadDatasource(datasource):
     ds = None
     try:
         #initialize ds metadata
-        for key in datasource.get("metadata_f").iterkeys():
+        for key in datasource.get("metadata_f").keys():
             datasource["metadata"][key] = None
 
         #initialize the bands
@@ -188,7 +189,7 @@ def loadDatasource(datasource):
             datasource["srs"].ImportFromWkt(ds.GetProjection())
 
         #load ds metadata
-        for key,func in datasource.get("metadata_f").iteritems():
+        for key,func in datasource.get("metadata_f").items():
             datasource["metadata"][key] = func(ds)
 
         if len(datasource["bands"]) > ds.RasterCount:
@@ -203,7 +204,7 @@ def loadDatasource(datasource):
                 band = {}
                 datasource["bands"].append(band)
             band["index"] = index
-            for key,func in datasource.get("band_metadata_f").iteritems():
+            for key,func in datasource.get("band_metadata_f").items():
                 band[key] = func(ds,index)
             #print "Band {} = {}".format(index,bandid)
             index+=1
@@ -420,7 +421,7 @@ WEATHER_ICONS = {
     19:{"icon":"/dist/static/images/weather/tropicalcyclone.png","desc":"Cyclone"},
 }
 
-for value in WEATHER_ICONS.itervalues():
+for value in WEATHER_ICONS.values():
     if "night-icon" not in value:
         value["night-icon"] = value["icon"]
 
@@ -1919,7 +1920,7 @@ def formatData(data,pattern,no_data=None):
         return str(data)
 
 def formatContext(context,patterns):
-    for key,value in context.iteritems():
+    for key,value in context.items():
         if isinstance(value,datetime.datetime):
             context[key] = formatData(value,patterns.get("{}_pattern".format(key),patterns.get("datetime_pattern")),"")
         elif isinstance(value,datetime.date):
@@ -2062,7 +2063,7 @@ def setDefaultOptionIfMissing(options,defaultOptions):
     if not options:
         return dict(defaultOptions)
 
-    for key,value in defaultOptions.iteritems():
+    for key,value in defaultOptions.items():
         if key not in options:
             options[key] = value
 
@@ -2142,7 +2143,7 @@ def outlookmetadata():
     """
     refresh = (bottle.request.query.get("refresh") or "false").lower() in ("true","yes","on")
     if refresh:
-        for datasource in raster_datasources["bom"].itervalues():
+        for datasource in raster_datasources["bom"].values():
             syncDatasource(datasource)
 
     bottle.response.set_header("Content-Type", "application/json")
@@ -2331,7 +2332,7 @@ def weatheroutlook(fmt):
                 
             #initialize 'daily_data' parameter
             if outlook.get("daily_data"):
-                for datasource in outlook["daily_data"].itervalues():
+                for datasource in outlook["daily_data"].values():
                     if not datasource.get("workspace"):
                         raise Exception("Property 'workspace' of datasource in daily_data is missing.")
                     if not datasource.get("id"):
@@ -2341,7 +2342,7 @@ def weatheroutlook(fmt):
         #extract the data from raster dataset and save the data into 'data' property of each datasource
         #the data structure is the same as the times structure
         for outlook in requestData["outlooks"]:
-            for datasource in outlook.get("daily_data",{}).itervalues():
+            for datasource in outlook.get("daily_data",{}).values():
                 datasource.update(getRasterData({
                     "datasource":datasource,
                     "point":requestData["point"],
@@ -2407,7 +2408,7 @@ def weatheroutlook(fmt):
 
             for outlook in requestData["outlooks"]:
                 outlook["options"] = setDefaultOptionIfMissing(outlook.get("options"),outlook_options)
-                for datasource in outlook.get("daily_data",{}).itervalues():
+                for datasource in outlook.get("daily_data",{}).values():
                     try:
                         datasource["options"] = setDefaultOptionIfMissing(datasource.get("options"),raster_datasources[datasource["workspace"]][datasource["id"]].get("options"))
                     except:
@@ -2443,7 +2444,7 @@ def weatheroutlook(fmt):
                         index += 1
                 
                 #format daily data
-                for datasource in outlook.get("daily_data", {}).itervalues():
+                for datasource in outlook.get("daily_data", {}).values():
                     if datasource["status"] :
                         formatBandsData(datasource,result["options"].get("no_data") or "",raster_datasources[datasource["workspace"]][datasource["id"]]["metadata"]["unit"])
                 
@@ -2454,7 +2455,7 @@ def weatheroutlook(fmt):
                     index = 0
                     while index < len(outlook["days"]):
                         groupContext["date"] = outlook["days"][index].strftime(outlook["options"]["date_pattern"])
-                        for name,datasource in outlook.get("daily_data",{}).iteritems():
+                        for name,datasource in outlook.get("daily_data",{}).items():
                             groupContext[name] = datasource["data"][index][1] if datasource["status"] else (result["options"].get("no_data") or "")
                         outlook["daily_group"].append(outlook.get("options",{}).get("daily_title_pattern","{date}").format(**groupContext))
                         index += 1
@@ -2508,7 +2509,7 @@ loadAllDatasources()
 #load outlook metadata
 #outlook_metadata = {'size':len(raster_datasources["bom"]),'datasources':[]}
 outlook_metadata = []
-for key,value in raster_datasources["bom"].iteritems():
+for key,value in raster_datasources["bom"].items():
     data = dict(value)
     if "metadata_f" in data:
         data.pop("metadata_f")
@@ -2586,7 +2587,7 @@ def _compare_datasource(ds1,ds2):
         return -1
 
 
-outlook_metadata = sorted(outlook_metadata,cmp=_compare_datasource)
+outlook_metadata = sorted(outlook_metadata,key=functools.cmp_to_key(_compare_datasource))
 for ds in outlook_metadata:
     ds.pop("sort_key")
 

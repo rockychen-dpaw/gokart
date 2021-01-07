@@ -17,8 +17,8 @@ from shapely.geometry.base import BaseGeometry
 from shapely import ops
 from functools import partial
 
-import settings
-import kmi
+from . import settings
+from . import kmi
 
 proj_aea = lambda geometry: pyproj.Proj("+proj=aea +lat_1=-17.5 +lat_2=-31.5 +lat_0=0 +lon_0=121 +x_0=5000000 +y_0=10000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
 

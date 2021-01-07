@@ -12,7 +12,7 @@ import traceback
 from jinja2 import Template
 
 from . import s3
-import settings
+from . import settings
 
 gdalinfo = subprocess.check_output(["gdalinfo", "--version"])
 

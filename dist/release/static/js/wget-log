@@ -1,0 +1,6 @@
+--2021-01-05 11:20:42--  https://csw.dpaw.wa.gov.au/catalogue/api/records/?format=json
+Resolving csw.dpaw.wa.gov.au (csw.dpaw.wa.gov.au)... 20.40.120.47
+Connecting to csw.dpaw.wa.gov.au (csw.dpaw.wa.gov.au)|20.40.120.47|:443... connected.
+HTTP request sent, awaiting response... 401 Unauthorized
+
+Username/Password Authentication Failed.

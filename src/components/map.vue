@@ -881,10 +881,9 @@
         }
         tileLayer.getSource().load()
       },
-      refreshTimelineFunc:function(layerOptions,postFetchTimelineFunc) {
+      refreshTimelineFunc:function(layer,postFetchTimelineFunc) {
         var vm = this
         var _func = null
-        var layer = layerOptions
         //return the refresh time, if need refresh,otherwise return null
         var _getRefreshTime = function() {
             if (!layer.lastTimelineRefreshTime) {
@@ -1013,7 +1012,13 @@
                 var layerId = null
                 layer.lastTimelineRefreshTime = currentRefreshTime
                 tileLayer.progress = "loading"
-                $.ajax(layer.fetchTimelineUrl(layer.lastUpdatetime || "") ,{
+                var timelineUrl = ""
+                if (layer.fetchTimelineUrl.indexOf("?") >= 0) {
+                    timelineUrl = layer.fetchTimelineUrl + "&updatetime=" +  (layer.lastUpdatetime || "")
+                } else {
+                    timelineUrl = layer.fetchTimelineUrl + "?updatetime=" +  (layer.lastUpdatetime || "")
+                }
+                $.ajax(timelineUrl ,{
                     xhrFields:{
                         withCredentials: true
                     },
@@ -1036,28 +1041,33 @@
         return _func
       },
       // loader for layers with a "time" axis, e.g. live satellite imagery
-      createTimelineLayer: function (options) {
-        if (options.mapLayer) return options.mapLayer
+      createTileWMSLayer: function (layer) {
+        if (layer.mapLayer) return layer.mapLayer
         var vm = this
-        options.params = $.extend({
+        var matrixSet = this.matrixSets[layer.params.matrixSet]
+        layer.params = $.extend({
           FORMAT: 'image/jpeg',
-          SRS: 'EPSG:4326'
-        }, options.params || {})
+          SRS: matrixSet.srs
+        }, layer.params || {})
+
+        if (!layer.timelineRefresh || !layer.fetchTimelineUrl) {
+            layer.params["layers"] = layer.layerid
+        }
 
         // technically, we can specify a WMS source and a layer without
         // either the source URL or the layerID. which is good, because
         // we need to do that later on in a callback.
         var tileSource = new ol.source.TileWMS({
-          params: options.params,
+          params: layer.params,
           tileGrid: new ol.tilegrid.TileGrid({
-            extent: [-180, -90, 180, 90],
+            extent: matrixSet.extent,,
             resolutions: this.resolutions,
-            tileSize: [1024, 1024]
+            tileSize: [matrixSet.tileSize, matrixSet.tileSize]
           })
         })
 
         var tileLayer = new ol.layer.Tile({
-          opacity: options.opacity || 1,
+          opacity: layer.opacity || 1,
           source: tileSource
         })
 
@@ -1068,29 +1078,27 @@
         // hook to swap the tile layer when timeIndex changes
         tileLayer.on('propertychange', function (event) {
           if (event.key === 'timeIndex') {
-            if (options.timeline && options.timeline.length > 0) {
+            if (layer.timeline && layer.timeline.length > 0) {
                 tileSource.updateParams({
-                  'layers': getLayerId(options.timeline[event.target.get(event.key)][1])
+                  'layers': getLayerId(layer.timeline[event.target.get(event.key)][1])
                 })
             }
           }
         })
 
-        if (!options.refreshTimeline && options.timelineRefresh && options.fetchTimelineUrl) {
-            options.refreshTimeline = vm.refreshTimelineFunc(options,function(layer,tileLayer,timeline){
-                tileLayer.getSource().setUrls(timeline.servers)
-            })
+        if (!layer.refreshTimeline && layer.timelineRefresh && layer.fetchTimelineUrl) {
+            layer.refreshTimeline = vm.refreshTimelineFunc(layer)
         }
 
 
         // set properties for use in layer selector
-        tileLayer.set('name', options.name)
-        tileLayer.set('id', options.mapLayerId)
-        tileLayer.layer = options
-        options.mapLayer = tileLayer
+        tileLayer.set('name', layer.name)
+        tileLayer.set('id', layer.mapLayerId)
+        tileLayer.layer = layer
+        layer.mapLayer = tileLayer
 
         tileLayer.refresh = function () {
-            if (!this.refreshTimeline) {
+            if (!layer.refreshTimeline) {
                 this.set('updated', moment().toLocaleString())
                 vm.$root.active.refreshRevision += 1
             }
@@ -1107,15 +1115,15 @@
         // if the "refresh" option is set, set a timer
         // to update the source
         tileLayer.postAdd = function() {
-            if (options.refreshTimeline) {
+            if (layer.refreshTimeline) {
                 if (tileLayer.autoTimelineRefresh) {
                     clearInterval(tileLayer.autoTimelineRefresh)
                     tileLayer.autoTimelineRefresh = null
                 }
-                options.refreshTimeline(true)
+                layer.refreshTimeline(true)
             }
 
-            if (options.refresh) {
+            if (layer.refresh) {
               this.set('updated', moment().toLocaleString())
               vm.$root.active.refreshRevision += 1
             }
@@ -1132,34 +1140,41 @@
         return tileLayer
       },
       // loader for vector layers with hover querying
-      createWFSLayer: function (options) {
-        if (options.mapLayer) return options.mapLayer
+      createWFSLayer: function (layer) {
+        if (layer.mapLayer) return layer.mapLayer
         var vm = this
-        var url = this.env.kmiService + "/wfs"
 
-        // default overridable params sent to the WFS source
-        options.params = $.extend({
-          version: '1.1.0',
+        layer.layerid = layer.layerid || getLayerId(layer.id)
+
+        layer.params = $.extend({
           service: 'WFS',
           request: 'GetFeature',
           outputFormat: 'application/json',
           srsname: 'EPSG:4326',
-          typename: getLayerId(options.id)
-        }, options.params || {})
+        }, layer.params || {})
 
+        if (layer.params.version == "2.0.0") {
+            if (!layer.params.typeNames) {
+                layer.params.typeNames = layer.layerid
+            }
+        } else {
+            if (!layer.params.typeName) {
+                layer.params.typeName = layer.layerid
+            }
+        }
 
         var vectorSource = new ol.source.Vector({
-            features:options.features || undefined
+            features:layer.features || undefined
         })
         var vector = new ol.layer.Vector({
-          opacity: options.opacity || 1,
+          opacity: layer.opacity || 1,
           source: vectorSource,
-          style: options.style
+          style: layer.params.style
         })
         vector.progress = ''
 
         vectorSource.retrieveFeatures = function (filter,onSuccess,onError) {
-          var params = $.extend({},options.params)
+          var params = $.extend({},layer.params)
           
           if (filter) {
             params.cql_filter = filter
@@ -1167,7 +1182,7 @@
             delete params.cql_filter
           }
           $.ajax({
-            url: url + '?' + $.param(params),
+            url: layer.url + '?' + $.param(params),
             success: function (response, stat, xhr) {
               var features = vm.$root.geojson.readFeatures(response)
               onSuccess(features)
@@ -1185,30 +1200,30 @@
         }
 
         vectorSource.loadSource = function (loadType,onSuccess) {
-          if (options.cql_filter) {
-            options.params.cql_filter = options.cql_filter
-          } else if (options.params.cql_filter) {
-            delete options.params.cql_filter
+          if (layer.cql_filter) {
+            layer.params.cql_filter = layer.cql_filter
+          } else if (layer.params.cql_filter) {
+            delete layer.params.cql_filter
           }
           vm.$root.active.refreshRevision += 1
           vector.progress = 'loading'
           $.ajax({
-            url: url + '?' + $.param(options.params),
+            url: layer.url + '?' + $.param(layer.params),
             success: function (response, stat, xhr) {
               var features = vm.$root.geojson.readFeatures(response)
               var defaultOnload = function(loadType,source,features) {
                   source.clear(true)
                   source.addFeatures(features)
               }
-              if (options.onload) {
-                options.onload(loadType,vectorSource,features,defaultOnload)
+              if (layer.onload) {
+                layer.onload(loadType,vectorSource,features,defaultOnload)
               } else {
                 defaultOnload(loadType,vectorSource,features)
               }
               vm.$root.active.refreshRevision += 1
               vector.progress = 'idle'
-              if(options.getUpdatedTime) {
-                var time = options.getUpdatedTime(features)
+              if(layer.getUpdatedTime) {
+                var time = layer.getUpdatedTime(features)
                 if (time) {
                     vector.set('updated', time.toLocaleString())
                 } else {
@@ -1225,8 +1240,8 @@
             error: function (jqXHR,status,message) {
               vm.$root.active.refreshRevision += 1
               vector.progress = 'error'
-              if (options.onerror) {
-                options.onerror(status,message)
+              if (layer.onerror) {
+                layer.onerror(status,message)
               }
             },
             dataType: 'json',
@@ -1236,16 +1251,16 @@
           })
         }
 
-        if (options.onadd) {
+        if (layer.onadd) {
           vectorSource.on('addfeature', function (event) {
-            options.onadd(event.feature)
+            layer.onadd(event.feature)
           })
         }
         
-        vector.set('name', options.name)
-        vector.set('id', options.mapLayerId)
+        vector.set('name', layer.name)
+        vector.set('id', layer.mapLayerId)
         vector.layer = options
-        options.mapLayer = vector
+        layer.mapLayer = vector
 
         vector.stopAutoRefresh = function() {
             vm._stopAutoRefresh(this)
@@ -1268,7 +1283,7 @@
             // to update the source
             this.startAutoRefresh()
             // populate the source with data
-            if (options.initialLoad === undefined || options.initialLoad === true) {
+            if (layer.initialLoad === undefined || layer.initialLoad === true) {
                 vectorSource.loadSource("initial")
             }
         }
@@ -1283,30 +1298,23 @@
         return this.annotations.featureOverlay
       },
       // loader to create a WMTS layer from a kmi datasource
-      createTileLayer: function (options) {
-        if (options.mapLayer) return options.mapLayer
+      createWMTSLayer: function (layer) {
+        if (layer.mapLayer) return layer.mapLayer
         var vm = this
-        if (options.base) {
-          options.format = 'image/jpeg'
-        }
-        var layer = $.extend({
+        layer.params = $.extend({
           opacity: 1,
-          name: 'Mapbox Outdoors',
-          id: 'dpaw:mapbox_outdoors',
           format: 'image/png',
-          tileSize: 1024,
-          style: '',
-          projection: 'EPSG:4326',
-          wmts_url: this.env.kmiService + "/gwc/service/wmts"
-        }, options)
+          matrixSet:'gda94',
+          style: ''
+        }, options.params)
 
         // create a tile grid using the stock KMI resolutions
-        var matrixSet = this.matrixSets[layer.projection][layer.tileSize]
+        var matrixSet = this.matrixSets[layer.params.matrixSet]
         var tileGrid = new ol.tilegrid.WMTS({
-          origin: ol.extent.getTopLeft([-180, -90, 180, 90]),
+          origin: matrixSet.extent.getTopLeft([-180, -90, 180, 90]),
           resolutions: this.resolutions,
           matrixIds: matrixSet.matrixIds,
-          tileSize: layer.tileSize
+          tileSize: matrixSet.tileSize
         })
 
         // override getZForResolution on tile grid object;
@@ -1321,12 +1329,12 @@
 
         // create a tile source
         var tileSource = new ol.source.WMTS({
-          url: layer.wmts_url,
-          layer: getLayerId(layer.id),
+          url: layer.url,
+          layer: layer.layerid,
           matrixSet: matrixSet.name,
-          format: layer.format,
-          style: layer.style,
-          projection: layer.projection,
+          format: layer.params.format,
+          style: layer.params.style,
+          projection: matrixSet.srs,
           wrapX: true,
           tileGrid: tileGrid
         })
@@ -1342,34 +1350,34 @@
         // set properties for use in layer selector
         tileLayer.set('name', layer.name,false)
         tileLayer.set('id', layer.mapLayerId,false)
-        tileLayer.layer = options
-        options.mapLayer = tileLayer
+        tileLayer.layer = layer
+        layer.mapLayer = tileLayer
 
-        if (options.lastUpdatetime) {
+        if (layer.lastUpdatetime) {
             tileLayer.set('updated',layer.lastUpdatetime)
         }
 
         // hook to swap the tile layer when timeIndex changes
         tileLayer.on('propertychange', function (event) {
           if (event.key === 'timeIndex') {
-            if (options.timeline && options.timeline.length > 0) {
-                if (!(options.timeline[event.target.get(event.key)][2])) {
-                    options.timeline[event.target.get(event.key)][2] = new ol.source.WMTS({
-                      url: layer.wmts_url,
-                      layer: getLayerId(options.timeline[event.target.get(event.key)][1]),
+            if (layer.timeline && layer.timeline.length > 0) {
+                if (!(layer.timeline[event.target.get(event.key)][2])) {
+                    layer.timeline[event.target.get(event.key)][2] = new ol.source.WMTS({
+                      url: layer.url,
+                      layer: getLayerId(layer.timeline[event.target.get(event.key)][1]),
                       matrixSet: matrixSet.name,
-                      format: layer.format,
-                      style: layer.style,
-                      projection: layer.projection,
+                      format: layer.params.format,
+                      style: layer.params.style,
+                      projection: matrixSet.srs,
                       wrapX: true,
                       tileGrid: tileGrid
                     })
-                    options.timeline[event.target.get(event.key)][2].setTileLoadFunction(vm.tileLoaderHook(options.timeline[event.target.get(event.key)][2], tileLayer))
-                    vm.setUrlTimestamp(options.timeline[event.target.get(event.key)][2],moment.utc().unix())
+                    layer.timeline[event.target.get(event.key)][2].setTileLoadFunction(vm.tileLoaderHook(layer.timeline[event.target.get(event.key)][2], tileLayer))
+                    vm.setUrlTimestamp(layer.timeline[event.target.get(event.key)][2],moment.utc().unix())
                 }
-                tileLayer.setSource(options.timeline[event.target.get(event.key)][2] )
+                tileLayer.setSource(layer.timeline[event.target.get(event.key)][2] )
 
-                if (options.refresh && options.autoRefreshStopped !== true ) {
+                if (layer.refresh && layer.autoRefreshStopped !== true ) {
                     tileLayer.stopAutoRefresh()
                     tileLayer.startAutoRefresh()
                 }
@@ -1377,8 +1385,8 @@
           }
         })
 
-        if (!options.refreshTimeline && options.timelineRefresh && options.fetchTimelineUrl) {
-            options.refreshTimeline = vm.refreshTimelineFunc(options,function(layer,tileLayer,timeline){
+        if (!layer.refreshTimeline && layer.timelineRefresh && layer.fetchTimelineUrl) {
+            layer.refreshTimeline = vm.refreshTimelineFunc(layer,function(layer,tileLayer,timeline){
                 if (layer.timeline) {
                     //reuse already created tile source
                     $.each(timeline.layers,function(index,timelineLayer) {
@@ -1394,12 +1402,12 @@
         }
 
         tileLayer.postAdd = function() {
-            if (options.refreshTimeline) {
+            if (layer.refreshTimeline) {
                 if (tileLayer.autoTimelineRefresh) {
                     clearInterval(tileLayer.autoTimelineRefresh)
                     tileLayer.autoTimelineRefresh = null
                 }
-                options.refreshTimeline(true)
+                layer.refreshTimeline(true)
             } else {
                 tileSource.setTileLoadFunction(vm.tileLoaderHook(tileSource, tileLayer))
             }
@@ -1407,7 +1415,7 @@
             // if the "refresh" option is set, set a timer
             // to force a reload of the tile content
             this.startAutoRefresh()
-            if (options.refresh) {
+            if (layer.refresh) {
               tileLayer.set('updated', moment().toLocaleString())
               vm.$root.active.refreshRevision += 1
             }
@@ -1422,7 +1430,7 @@
         }   
 
         tileLayer.refresh = function() {
-            if (!this.refreshTimeline) {
+            if (!layer.refreshTimeline) {
                 this.set('updated', moment().toLocaleString())
                 vm.$root.active.refreshRevision += 1
             }
@@ -1441,37 +1449,31 @@
       },
 
       // loader to create a WMTS layer from a kmi datasource
-      createImageLayer: function (options) {
-        if (options.mapLayer) return options.mapLayer
+      createWMSLayer: function (layer) {
+        if (layer.mapLayer) return layer.mapLayer
         var vm = this
-        if (options.base) {
-          options.format = 'image/jpeg'
-        }
-        var layer = $.extend({
+        layer.layerid = layer.layerid || getLayerId(layer.id)
+        layer.wmsOptions.params = $.extend({
           opacity: 1,
-          name: 'Mapbox Outdoors',
-          id: 'dpaw:mapbox_outdoors',
           format: 'image/png',
-          tileSize: 1024,
           style: '',
-          projection: 'EPSG:4326',
-          wms_url: this.env.kmiService + "/wms"
-        }, options)
+          srs: 'EPSG:4326',
+        }, layer.wmsOptions.params||{})
 
         // create a tile source
         var imgSource = new ol.source.ImageWMS({
-          url: layer.wms_url,
+          url: layer.wmsOptions.url,
           crossOrigin :'use-credentials',
-          serverType:"geoserver",
+          serverType:layer.wmsOptions.serverType || "geoserver",
           params:{
-            LAYERS:getLayerId(layer.id),
-            styles:layer.style
+            LAYERS:layer.layerid,
+            styles:layer.wmsOptions.params.style
           },
-          projection: layer.projection,
+          projection: layer.wmsOptions.params.srs,
         })
 
         var imgLayer = new ol.layer.Image({
-          opacity: layer.opacity || 1,
+          opacity: layer.wmsOptions.opacity || 1,
           source: imgSource
         })
 
@@ -1490,7 +1492,7 @@
         }
 
         imgLayer.refresh = function() {
-            if (options.refresh) {
+            if (layer.wmsOptions.refresh) {
                 imgLayer.set('updated', moment().toLocaleString())
                 vm.$root.active.refreshRevision += 1
             }
@@ -1502,8 +1504,8 @@
         // set properties for use in layer selector
         imgLayer.set('name', layer.name,false)
         imgLayer.set('id', layer.mapLayerId,false)
-        imgLayer.layer = options
-        options.mapLayer = imgLayer
+        imgLayer.layer = layer
+        layer.mapLayer = imgLayer
 
         if (options.lastUpdatetime) {
             imgLayer.set('updated',layer.lastUpdatetime)
@@ -1514,14 +1516,14 @@
         }
 
         imgLayer.startAutoRefresh = function() {
-            vm._startAutoRefresh(this)
+            vm._startAutoRefresh(this,layer.wmsOptions)
         }
 
         imgLayer.postAdd = function() {
             // if the "refresh" option is set, set a timer
             // to force a reload of the tile content
             this.startAutoRefresh()
-            if (options.refresh) {
+            if (layer.wmsOptions.refresh) {
               imgLayer.set('updated', moment().toLocaleString())
               vm.$root.active.refreshRevision += 1
             }
@@ -1700,28 +1702,8 @@
 
       },
 
-      initLayers: function (fixedLayers, activeLayers) {
+      initLayers: function (activeLayers) {
         var vm = this
-        //add fixed layers to category
-        $.each(fixedLayers,function(index,fixedLayer) {
-            var catLayer = vm.$root.catalogue.getLayer(fixedLayer.mapLayerId || fixedLayer.id)
-            if (catLayer) {
-                //fixed layer already exist, update the properties 
-                $.extend(catLayer,fixedLayer,{
-                    name:catLayer["name"] || fixedLayer["name"],
-                    title:catLayer["title"] || fixedLayer["title"],
-                    abstract:catLayer["abstract"] || fixedLayer["abstract"],
-                })
-                if (catLayer.dependentLayers) {
-                    $.each(catLayer.dependentLayers,function(index,layer){
-                        layer.mapLayerId = layer.mapLayerId || layer.id
-                    })
-                }
-            } else {
-                //fixed layer not exist, add it
-                vm.$root.catalogue.catalogue.push(fixedLayer)
-            }
-        })
         vm._overviewLayer = vm._overviewLayer || $.extend({},vm.$root.catalogue.getLayer(vm.env.overviewLayer || "dpaw:mapbox_outdoors"))
 
         //ignore the active layers which does not exist in the catalogue layers.
@@ -2096,7 +2078,7 @@
       }
 
       this._startAutoRefresh = function(olLayer) {
-          if (olLayer.layer.refresh && !olLayer.autoRefresh ) {
+          if (options.refresh && !olLayer.autoRefresh ) {
               olLayer.autoRefresh = setInterval(function () {
                   olLayer.refresh()
               }, olLayer.layer.refresh * 1000)
@@ -2123,14 +2105,12 @@
       }
 
       // generate matrix IDs from name and level number
-      $.each(this.matrixSets, function (projection, innerMatrixSets) {
-        $.each(innerMatrixSets, function (tileSize, matrixSet) {
+      $.each(this.matrixSets, function (name, matrixSet) {
           var matrixIds = new Array(matrixSet.maxLevel - matrixSet.minLevel + 1)
           for (var z = matrixSet.minLevel; z <= matrixSet.maxLevel; ++z) {
-            matrixIds[z] = matrixSet.name + ':' + z
+            matrixIds[z] = name + ':' + z
           }
           matrixSet.matrixIds = matrixIds
-        })
       })
 
       mapStatus.phaseEnd("initialize")

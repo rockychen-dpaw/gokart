@@ -1,0 +1,19 @@
+Done
+ 1. Remove layer's 'edit' link in tab 'Browse Layers'
+ 2. Get layer's legend url from layers json file
+ 3. Remove 'catalogueAdminService' from env file
+ 4. Replace 'cswService' with 'layers'
+ 5. Remove 'wfsParams' from env file
+ 6. Change 'fetchTimelineUrl' in timneline layer from function to string
+ 7. Remove 'setTimeIndex' function from sss.js to use the default one declared in map.js
+ 8. Change matrixSet's data structure from mapping between project,tileSize and matrixSet to mapping between matrixSet name and matrixSet
+ 9. Rename the layer's property 'identifier' to 'id'
+ 10.Rename the layer's property 'systemid' to 'layerid'
+ 11. Move timeline related configures from backend to layers json file
+ 12. Rename method 'createImageLayer' to 'createWMSLayer'
+ 13. Rename method 'createTileLayer' to 'createWMTSLayer'
+ 14. Rename method 'createTimelineLayer' to 'createTileWMSLayer'
+
+Doing
+ 1.remove 'kmiService' in browser side
+ 2. Remove 'fixedLayers' from sss.js

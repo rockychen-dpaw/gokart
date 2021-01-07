@@ -1,11 +1,19 @@
 var env = {
     appType: (window.location.protocol == "file:")?"cordova":"webapp",
+    
+    srs:"EPSG:4326",
+    layers:'http://sss-local.dbca.wa.gov.au:8080/dist/static/js/layers.json',
+    //layers:"https://csw.dpaw.wa.gov.au/catalogue/api/records/?format=json&application__name=sss" ,
 
-    cswService:"https://csw.dbca.wa.gov.au/catalogue/api/records/",
-    catalogueAdminService:"https://csw.dbca.wa.gov.au",
+
+    wfsParams : {
+       version: '1.1.0',
+       service: 'WFS',
+       request: 'GetFeature',
+       outputFormat: 'application/json'
+    },
 
     kmiService:"https://kmi.dbca.wa.gov.au/geoserver",
-    legendSrc:"https://kmi.dbca.wa.gov.au/geoserver/gwc/service/wms?REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&legend_options=fontName:Times%20New%20Roman;fontAntiAliasing:true;fontSize:14;bgColor:0xFFFFEE;dpi:120;labelMargin:10&LAYER=",
 
     gokartService:"",
     resourceTrackingService:"https://resourcetracking-uat.dbca.wa.gov.au",

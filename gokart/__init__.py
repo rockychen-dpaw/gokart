@@ -21,8 +21,8 @@ except:
     import Image
 
 import bottle
-import shapely_extension
-import settings
+from . import shapely_extension
+from . import settings
 
 import sys
 import traceback
@@ -30,19 +30,19 @@ import traceback
 
 from .jinja2settings import settings as jinja2settings
 
-import spatial
+from . import spatial
 bottle.route("/spatial", "POST", spatial.spatial)
 
-import gdal
+from . import gdal
 bottle.route("/gdal/<fmt>", "POST", gdal.gdal)
 bottle.route("/ogrinfo", "POST", gdal.ogrinfo)
 bottle.route("/download/<fmt>", "POST", gdal.download)
 
-import raster
+from . import raster
 bottle.route('/outlookmetadata', "GET", raster.outlookmetadata)
 bottle.route('/weatheroutlook/<fmt>', "POST", raster.weatheroutlook)
 
-import kmi
+from . import kmi
 bottle.route('/kmi/layer',"GET",kmi.layermetadata)
 
 @bottle.route('/client')
@@ -69,7 +69,7 @@ def _get_profile(app):
         file_data = None
         with open(appPath, "rb") as f:
             file_data = f.read()
-        m = profile_re.search(file_data)
+        m = profile_re.search(file_data.decode())
         profile = {
             'mtime': repr(os.path.getmtime(appPath)),
             'size': os.path.getsize(appPath),
@@ -77,7 +77,7 @@ def _get_profile(app):
         }
         m = hashlib.md5()
         m.update(file_data)
-        profile['profile']['build']['md5'] = base64.urlsafe_b64encode(m.digest()).rstrip("=")
+        profile['profile']['build']['md5'] = base64.urlsafe_b64encode(m.digest()).decode().rstrip("=")
         file_data = None
         if profileChanged:
             uwsgi.cache_update(key, json.dumps(profile))
@@ -106,7 +106,7 @@ def _get_profile(app):
         vendorProfile = {
             'mtime': repr(os.path.getmtime(vendorPath)),
             'size': os.path.getsize(vendorPath),
-            'vendorMD5': base64.urlsafe_b64encode(m.digest()).rstrip("=")
+            'vendorMD5': base64.urlsafe_b64encode(m.digest()).decode().rstrip("=")
         }
         if profileChanged:
             uwsgi.cache_update(key, json.dumps(vendorProfile))
@@ -136,7 +136,7 @@ def _get_profile(app):
             envProfile = {
                 'mtime': repr(os.path.getmtime(envPath)),
                 'size': os.path.getsize(envPath),
-                'envMD5':base64.urlsafe_b64encode(m.digest()).rstrip("=")
+                'envMD5':base64.urlsafe_b64encode(m.digest()).decode().rstrip("=")
             }
             if profileChanged:
                 uwsgi.cache_update(key, json.dumps(envProfile))
@@ -167,7 +167,7 @@ def _get_profile(app):
             styleProfile = {
                 'mtime': repr(os.path.getmtime(stylePath)),
                 'size': os.path.getsize(stylePath),
-                'styleMD5':base64.urlsafe_b64encode(m.digest()).rstrip("=")
+                'styleMD5':base64.urlsafe_b64encode(m.digest()).decode().rstrip("=")
             }
             if profileChanged:
                 uwsgi.cache_update(key, json.dumps(styleProfile))
@@ -177,7 +177,7 @@ def _get_profile(app):
     return profile["profile"]
 
 @bottle.route("/profile/<app>")
-def profile(app):
+def get_profile(app):
     #get app profile
     try:
         profile = _get_profile(app)
@@ -187,7 +187,7 @@ def profile(app):
         bottle.response.status = 400
         bottle.response.set_header("Content-Type","text/plain")
         traceback.print_exc()
-        return traceback.format_exception_only(sys.exc_type,sys.exc_value)
+        return traceback.format_exception_only(*sys.exc_info()[:2])
 
 # serve up map apps
 @bottle.route('/<app>')
@@ -201,7 +201,7 @@ def index(app):
         bottle.response.status = 400
         bottle.response.set_header("Content-Type","text/plain")
         traceback.print_exc()
-        return traceback.format_exception_only(sys.exc_type,sys.exc_value)
+        return traceback.format_exception_only(*sys.exc_info()[:2])
 
 @bottle.route("/weatherforecast",method="POST")
 def weatherforecast():
@@ -225,7 +225,7 @@ def weatherforecast():
         bottle.response.status = 400
         bottle.response.set_header("Content-Type","text/plain")
         traceback.print_exc()
-        return traceback.format_exception_only(sys.exc_type,sys.exc_value)
+        return traceback.format_exception_only(*sys.exc_info()[:2])
 
 # saveas
 @bottle.route("/saveas", method="POST")
@@ -259,7 +259,11 @@ FIREWATCH_HTTPS_VERIFY = settings.get_bool("FIREWATCH_HTTPS_VERIFY", True)
 @bottle.route("/hi8/<target>")
 def himawari8(target):
     last_updatetime = bottle.request.query.get("updatetime")
-    baseUrl = bottle.request.url[0:bottle.request.url.find("/hi8")]
+    getLayers = bottle.request.query.get("getLayers")
+    https_verify = (bottle.request.query.get("https_verify") or "true").lower() == "true"
+    if not getLayers.startswith("http"):
+        getLayers = "{}{}".format(bottle.request.url[0:bottle.request.url.find("/hi8")],getLayers)
+
     key = "himawari8.{}".format(target)
     result = None
     getcaps = None
@@ -269,7 +273,7 @@ def himawari8(target):
         else:
             getcaps = uwsgi.cache_get("himawari8")
     else:
-        res = requests.get("{}{}".format(baseUrl,FIREWATCH_GETCAPS),verify=FIREWATCH_HTTPS_VERIFY)
+        res = requests.get(getLayers,verify=https_verify)
         res.raise_for_status()
         getcaps = res.content
         getcaps = getcaps.decode("utf-8")

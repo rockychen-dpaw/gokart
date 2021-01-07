@@ -103,12 +103,13 @@ var volatileData = {
     ['resources', 'Resource Tracking']
   ],
   matrixSets: {
-    'EPSG:4326': {
-      '1024': {
+    'gda94': {
+        'tileSize':1024,
+        "extent": [-180, -90, 180, 90],
+        'srs':'EPSG:4326',
         'name': 'gda94',
         'minLevel': 0,
         'maxLevel': 17
-      }
     }
   }
 }
@@ -191,7 +192,6 @@ if (result) {
           // store contains state we want to reload/persist
           store: storedData,
           pngs: {},
-          fixedLayers:[],
           saved: null,
           touring: false,
           menuRevision:1,
@@ -339,7 +339,8 @@ if (result) {
                     $.extend(self.store.whoami,response)
                 },
                 error: function (xhr,status,message) {
-                    alert("Get user profile failed.  " + status + " : " + (xhr.responseText || message))
+                    $.extend(self.store.whoami,{"username": "RockyC", "shared_id": "a73351f6262821b04179c559750079b312846cc8a9a2262f3314609dacc2ced3", "first_name": "Rocky", "last_name": "Chen", "client_logon_ip": "139.130.215.10", "session_key": "arnpq7peh8l8eae70calje7lk4gfqprt", "email": "rocky.chen@dbca.wa.gov.au"})
+                    //alert("Get user profile failed.  " + status + " : " + (xhr.responseText || message))
                 },
                 xhrFields: {
                   withCredentials: true
@@ -364,203 +365,6 @@ if (result) {
             $('#menu-tabs').find('.tabs-title a[aria-selected=true]').attr('aria-selected', false)
             self.map.olmap.updateSize()
           })
-    
-          // pack-in catalogue
-          self.fixedLayers = self.fixedLayers.concat([{
-          /*
-            type: 'TileLayer',
-            name: 'Firewatch Hotspots 72hrs',
-            id: 'landgate:firewatch_ecu_hotspots_last_0_72',
-            format: 'image/png',
-            refresh: 60
-          }, {
-          */
-            type: 'TimelineLayer',
-            name: 'Himawari-8 Hotspots',
-            id: 'himawari8:hotspots',
-            params: {
-              FORMAT: 'image/png'
-            },
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return self.env.gokartService + '/hi8/AHI_TKY_FHS?updatetime=' + lastUpdatetime
-            },
-            setTimeIndex:function(layer,tileLayer,previousTimeline,defaultFunc) {
-                var timeIndex = null
-                if (previousTimeline && previousTimeline.length > 1 && tileLayer.get('timeIndex') && tileLayer.get('timeIndex') < previousTimeline.length && tileLayer.get('timeIndex') >= 1) {
-                    timeIndex = tileLayer.get('timeIndex')
-                }
-                if (timeIndex == null || timeIndex == previousTimeline.length - 1) {
-                    var newTimeIndex = layer.timeline.length - 1
-                    if (previousTimeline && previousTimeline[timeIndex][0] === layer.timeline[newTimeIndex][0]) {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1,true)
-                    } else {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1)
-                    }
-                } else {
-                    var newTimeIndex = layer.timeline.findIndex(function(o) {return o[0] === previousTimeline[timeIndex][0]})
-                    if (newTimeIndex >= 0) {
-                        tileLayer.set('timeIndex',newTimeIndex,true)
-                    } else {
-                        defaultFunc(layer,tileLayer,previousTimeline)
-                    }
-                }
-            }
-          }, {
-            type: 'TimelineLayer',
-            name: 'Himawari-8 True Colour',
-            id: 'himawari8:bandtc',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return self.env.gokartService + '/hi8/AHI_TKY_b321?updatetime=' + lastUpdatetime
-            },
-            setTimeIndex:function(layer,tileLayer,previousTimeline,defaultFunc) {
-                var timeIndex = null
-                if (previousTimeline && previousTimeline.length > 1 && tileLayer.get('timeIndex') && tileLayer.get('timeIndex') < previousTimeline.length && tileLayer.get('timeIndex') >= 1) {
-                    timeIndex = tileLayer.get('timeIndex')
-                }
-                if (timeIndex == null || timeIndex == previousTimeline.length - 1) {
-                    var newTimeIndex = layer.timeline.length - 1
-                    if (previousTimeline && previousTimeline[timeIndex][0] === layer.timeline[newTimeIndex][0]) {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1,true)
-                    } else {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1)
-                    }
-                } else {
-                    var newTimeIndex = layer.timeline.findIndex(function(o) {return o[0] === previousTimeline[timeIndex][0]})
-                    if (newTimeIndex >= 0) {
-                        tileLayer.set('timeIndex',newTimeIndex,true)
-                    } else {
-                        defaultFunc(layer,tileLayer,previousTimeline)
-                    }
-                }
-            }
-            //base: true
-          /*
-          }, {
-            type: 'TimelineLayer',
-            name: 'Himawari-8 Band 3',
-            id: 'himawari8:band3',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return self.env.gokartService + '/hi8/AHI_TKY_b3?updatetime=' + lastUpdatetime
-            }
-            base: true
-          */
-          }, {
-            type: 'TimelineLayer',
-            name: 'Himawari-8 Band 7',
-            id: 'himawari8:band7',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return self.env.gokartService + '/hi8/AHI_TKY_b7?updatetime=' + lastUpdatetime
-            },
-            setTimeIndex:function(layer,tileLayer,previousTimeline,defaultFunc) {
-                var timeIndex = null
-                if (previousTimeline && previousTimeline.length > 1 && tileLayer.get('timeIndex') && tileLayer.get('timeIndex') < previousTimeline.length && tileLayer.get('timeIndex') >= 1) {
-                    timeIndex = tileLayer.get('timeIndex')
-                }
-                if (timeIndex == null || timeIndex == previousTimeline.length - 1) {
-                    var newTimeIndex = layer.timeline.length - 1
-                    if (previousTimeline && previousTimeline[timeIndex][0] === layer.timeline[newTimeIndex][0]) {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1,true)
-                    } else {
-                        tileLayer.set('timeIndex',layer.timeline.length - 1)
-                    }
-                } else {
-                    var newTimeIndex = layer.timeline.findIndex(function(o) {return o[0] === previousTimeline[timeIndex][0]})
-                    if (newTimeIndex >= 0) {
-                        tileLayer.set('timeIndex',newTimeIndex,true)
-                    } else {
-                        defaultFunc(layer,tileLayer,previousTimeline)
-                    }
-                }
-            }
-            //base: true
-         /*
-          }, {
-            type: 'TimelineLayer',
-            name: 'Himawari-8 Band 15',
-            id: 'himawari8:band15',
-            source: self.env.gokartService + '/hi8/AHI_TKY_b15',
-            refresh: 300,
-            //base: true
-          }, {
-            type: 'TileLayer',
-            name: 'State Map Base',
-            id: 'cddp:state_map_base',
-            //base: true
-          }, {
-            type: 'TileLayer',
-            name: 'Virtual Mosaic',
-            id: 'landgate:LGATE-V001',
-            //base: true
-          }, {
-            type: 'TileLayer',
-            name: 'DFES Active Fireshapes',
-            id: 'landgate:dfes_active_fireshapes',
-            refresh: 60
-          */
-          /*}, {
-            type: 'TileLayer',
-            name: 'Forest Fire Danger Index',
-            id: 'bom:forest_fire_danger_index',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDZ71117?basetimelayer=bom:IDZ71117_datetime&timelinesize=72&layertimespan=3600&updatetime=" + lastUpdatetime
-            }*/
-		  }, {
-            type: 'TileLayer',
-            name: 'Forest Fire Danger Index',
-            id: 'bom:forest_fire_danger_index',
-            timelineRefresh: 300,
-            fetchTimelineUrl: function(lastUpdatetime){
-                //return "/bom/IDZ71117?basetimelayer=bom:IDZ71117_datetime&timelinesize=72&layertimespan=3600&updatetime=" + lastUpdatetime
-				return "/bom/IDZ71117?basetimelayer=bom:IDZ71117_datetime&timelinesize=72&layertimespan=3600&updatetime=" + lastUpdatetime
-            }
-          }, {
-            type: 'TileLayer',
-            name: 'Maximum Forest Fire Danger Index',
-            id: 'bom:maximum_forest_fire_danger_index',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDZ71118?basetimelayer=bom:IDZ71118_datetime&timelinesize=4&layertimespan=86400&updatetime=" + lastUpdatetime
-            }
-          }, {
-            type: 'TileLayer',
-            name: 'Grassland Fire Danger Index',
-            id: 'bom:grass_fire_danger_index',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDZ71122?basetimelayer=bom:IDZ71122_datetime&timelinesize=72&layertimespan=3600&updatetime=" + lastUpdatetime
-            }
-          }, {
-            type: 'TileLayer',
-            name: 'Maximum Grassland Fire Danger Index',
-            id: 'bom:maximum_grass_fire_danger_index',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDZ71123?basetimelayer=bom:IDZ71123_datetime&timelinesize=4&layertimespan=86400&updatetime=" + lastUpdatetime
-            }
-          }, {
-            type: 'TileLayer',
-            name: 'Continuous Haines',
-            id: 'bom:continuous_haines',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDZ71115?basetimelayer=bom:IDZ71115_datetime&timelinesize=56&layertimespan=10800&updatetime=" + lastUpdatetime
-            }
-          }
-		  /*, {
-            type: 'TileLayer',
-            name: 'mslp',
-            id: 'bom:mslp',
-            timelineRefresh:300,
-            fetchTimelineUrl:function(lastUpdatetime){
-                return "/bom/IDY25300mslp?basetimelayer=bom:IDY25300_datetime&timelinesize=73&layeridpattern=IDY25300{:0>3}mslp&layertimespan=3600&updatetime=" + lastUpdatetime
-            }
-          }*/
-		  ])
     
           // load custom annotation tools
     
@@ -735,7 +539,7 @@ if (result) {
     
                     self.loading.app.phaseBegin("init_map_layers",10,"Initialize map layers")
                     failed_phase = "init_map_layers"
-                    self.map.initLayers(self.fixedLayers, self.store.activeLayers)
+                    self.map.initLayers(self.store.activeLayers)
                     self.loading.app.phaseEnd("init_map_layers")
     
                     // tell other components map is ready
