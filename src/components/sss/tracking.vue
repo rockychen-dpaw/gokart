@@ -1027,127 +1027,125 @@
 
       trackingStatus.phaseBegin("load_resources",30,"Load resources",false,true)
       var _addResourceFunc = addResourceFunc(resourceTrackingStyleFunc('dpaw:resource_tracking_live'))
-      this.$root.fixedLayers.push({
-        type: 'WFSLayer',
-        name: 'Resource Tracking',
-        id: 'dpaw:resource_tracking_live',
-        features:vm._featurelist,
-        cql_filter:vm.getSourceFilter(),
-        getFeatureInfo:function (f) {
-            var extra_device_label = deviceExtraHoverLabel(f)
-            return {name:f.get("label"), img:vm.map.getBlob(f, ['icon', 'tint']),
-                comments:"(" + vm.ago(f.get("seen")) + " ago, Heading:" + f.get("heading") + "&deg;)<br>" +
-                    extra_device_label}
-        },
-        refresh: 60,
-        onerror: function(status,message) {
-            trackingStatus.phaseFailed("load_resources",status + " : " + message)
-        },
-        onload: function(loadType,vectorSource,features,defaultOnload) {
-            function processResources() {
-                $.each(features,function(index,f){
-                    _addResourceFunc(f)
-                })
-                
-                if (vm.selectedFeatures.getLength() > 0) {
-                    var loadedFeature = null
-                    for(var index = vm.selectedFeatures.getLength() - 1;index >= 0;index--) {
-                        var f = vm.selectedFeatures.item(index)
-                        loadedFeature = features.find(function(f1){return f1.get('deviceid') === f.get('deviceid')})
-                        if (loadedFeature) {
-                            vm.selectedFeatures.setAt(index,loadedFeature)
-                        } else {
-                            vm.selectedFeatures.removeAt(index)
-                        }
-                    }
-                }
+      this.$root.layerConfigs = $.extend(this.$root.layerConfigs,{
+          "dpaw:resource_tracking_live": {
+              features:vm._featurelist,
+              cql_filter:vm.getSourceFilter(),
+              getFeatureInfo:function (f) {
+                  var extra_device_label = deviceExtraHoverLabel(f)
+                  return {
+                      name:f.get("label"), img:vm.map.getBlob(f, ['icon', 'tint']),
+                      comments:"(" + vm.ago(f.get("seen")) + " ago, Heading:" + f.get("heading") + "&deg;)<br>" +
+                      extra_device_label
+                  }
+              },
 
-                vm.features.clear()
-                vm.features.extend(features.sort(vm.featureOrder))
-                vm.updateViewport(0)
-                vm.updateFeatureFilter(0)
-                //remove nonexisted deviceid from clippedFeatures
-                if (loadType === "querySavedSelection") {
-                    for(var index = vm.clippedFeatures.length - 1;index >= 0;index--) {
-                        if (!features.find(function(f){return f.get("deviceid") === vm.clippedFeatures[index]})) {
-                            vm.clippedFeatures.splice(index,1)
-                        }
-                    }
-                }
-                trackingStatus.phaseEnd("load_resources")
-            }
-            if ((vm.whoami.editVehicle === null || vm.whoami.editVehicle === undefined ) && features.length > 0) {
-                var f = features.find(function(f) {return f.get('source_device_type') != "tracplus"})
-                if (f){
-                    utils.checkPermission(vm.env.resourceTrackingService + "/sss_admin/tracking/device/" + f.get('id') + "/change/","GET",function(allowed){
-                        vm.whoami.editVehicle = allowed
-                        processResources()
-                    })
-                } else {
-                    processResources()
-                }
-            } else {
-                processResources()
-            }
-        }
-      }, {
-        type: 'WFSLayer',
-        name: 'Resource Tracking History',
-        id: 'dpaw:resource_tracking_history',
-        onadd: function(addResource) {
-            return function(f){
-                if (f.getGeometry() instanceof ol.geom.Point) {
-                    addResource(f)
-                }
-            }
-        }(addResourceFunc(resourceTrackingStyleFunc('dpaw:resource_tracking_history'))),
-        cql_filter: false,
-        getFeatureInfo:function (f) {
-            if (f.getGeometry() instanceof ol.geom.Point) {
-                var name = deviceLabel(f)
-                var extra_device_label = deviceExtraHoverLabel(f)
-                return {name:name, img:vm.map.getBlob(f, ['icon', 'tint']),
-                    comments:"(" + f.get("label") + ", Heading:" + f.get("heading") + "&deg;)<br>" +
-                        extra_device_label}
-            } else {
-                return {name:f.get("name"), img:vm.map.getBlob(f, ['icon', 'tint']), comments:"(" + f.get("startTime") + " - " + f.get("endTime") + ")"}
-            }
-        },
-        onload: function(loadType,vectorSource,features,defaultOnload) {
-            defaultOnload(loadType,vectorSource,features)
-            // callback to draw the line trail after the points information is loaded
-            var devices = {}
-            // group by device
-            features.forEach(function (feature) {
-                var deviceid = feature.get("deviceid")
-                if (!(deviceid in devices)) {
-                  devices[deviceid] = []
-                }
-                devices[deviceid].push(feature)
-            })
-            Object.keys(devices).forEach(function (device) {
-                // sort by timestamp
-                devices[device].sort(vm.featureOrder)
-                // pull the coordinates
-                var coords = devices[device].map(function (point) {
-                    point.set('label', moment(point.get('seen')).format('MMM DD HH:mm')) 
-                    return point.getGeometry().getCoordinates()
-                })
-                // create a new linestring
-                var f = devices[device][0]
-                var name = deviceLabel(f)
-                var feature = new ol.Feature({
-                  name: name + ' path',
-                  icon: f.get('icon'),
-                  tint: f.get('tint'),
-                  endTime: moment(f.get('seen')).format('MMM DD HH:mm'),
-                  startTime: moment(devices[device][devices[device].length - 1].get('seen')).format('MMM DD HH:mm'),
-                  geometry: new ol.geom.LineString(coords)
-                })
-                vectorSource.addFeature(feature)
-            })
-        }
-
+              onerror: function(status,message) {
+                  trackingStatus.phaseFailed("load_resources",status + " : " + message)
+              },
+              onload: function(loadType,vectorSource,features,defaultOnload) {
+                  function processResources() {
+                      $.each(features,function(index,f){
+                          _addResourceFunc(f)
+                      })
+                    
+                      if (vm.selectedFeatures.getLength() > 0) {
+                          var loadedFeature = null
+                          for(var index = vm.selectedFeatures.getLength() - 1;index >= 0;index--) {
+                              var f = vm.selectedFeatures.item(index)
+                              loadedFeature = features.find(function(f1){return f1.get('deviceid') === f.get('deviceid')})
+                              if (loadedFeature) {
+                                  vm.selectedFeatures.setAt(index,loadedFeature)
+                            }   else {
+                                  vm.selectedFeatures.removeAt(index)
+                              }
+                          }
+                      }
+    
+                      vm.features.clear()
+                      vm.features.extend(features.sort(vm.featureOrder))
+                      vm.updateViewport(0)
+                      vm.updateFeatureFilter(0)
+                      //remove nonexisted deviceid from clippedFeatures
+                      if (loadType === "querySavedSelection") {
+                          for(var index = vm.clippedFeatures.length - 1;index >= 0;index--) {
+                              if (!features.find(function(f){return f.get("deviceid") === vm.clippedFeatures[index]})) {
+                                  vm.clippedFeatures.splice(index,1)
+                              }
+                          }
+                      }
+                      trackingStatus.phaseEnd("load_resources")
+                  }
+                  if ((vm.whoami.editVehicle === null || vm.whoami.editVehicle === undefined ) && features.length > 0) {
+                      var f = features.find(function(f) {return f.get('source_device_type') != "tracplus"})
+                      if (f){
+                          utils.checkPermission(vm.env.resourceTrackingService + "/sss_admin/tracking/device/" + f.get('id') + "/change/","GET",function(allowed){
+                              vm.whoami.editVehicle = allowed
+                              processResources()
+                          })
+                      } else {
+                          processResources()
+                      }
+                  } else {
+                      processResources()
+                  }
+              }
+          },
+          "dpaw:resource_tracking_history":{
+              onadd: function(addResource) {
+                  return function(f){
+                      if (f.getGeometry() instanceof ol.geom.Point) {
+                          addResource(f)
+                      }
+                  }
+              }(addResourceFunc(resourceTrackingStyleFunc('dpaw:resource_tracking_history'))),
+              cql_filter: false,
+              getFeatureInfo:function (f) {
+                  if (f.getGeometry() instanceof ol.geom.Point) {
+                      var name = deviceLabel(f)
+                      var extra_device_label = deviceExtraHoverLabel(f)
+                      return {name:name, img:vm.map.getBlob(f, ['icon', 'tint']),
+                          comments:"(" + f.get("label") + ", Heading:" + f.get("heading") + "&deg;)<br>" +
+                              extra_device_label}
+                  } else {
+                      return {name:f.get("name"), img:vm.map.getBlob(f, ['icon', 'tint']), comments:"(" + f.get("startTime") + " - " + f.get("endTime") + ")"}
+                  }
+              },
+              onload: function(loadType,vectorSource,features,defaultOnload) {
+                  defaultOnload(loadType,vectorSource,features)
+                  // callback to draw the line trail after the points information is loaded
+                  var devices = {}
+                  // group by device
+                  features.forEach(function (feature) {
+                      var deviceid = feature.get("deviceid")
+                      if (!(deviceid in devices)) {
+                        devices[deviceid] = []
+                      }
+                      devices[deviceid].push(feature)
+                  })
+                  Object.keys(devices).forEach(function (device) {
+                      // sort by timestamp
+                      devices[device].sort(vm.featureOrder)
+                      // pull the coordinates
+                      var coords = devices[device].map(function (point) {
+                          point.set('label', moment(point.get('seen')).format('MMM DD HH:mm')) 
+                          return point.getGeometry().getCoordinates()
+                      })
+                      // create a new linestring
+                      var f = devices[device][0]
+                      var name = deviceLabel(f)
+                      var feature = new ol.Feature({
+                        name: name + ' path',
+                        icon: f.get('icon'),
+                        tint: f.get('tint'),
+                        endTime: moment(f.get('seen')).format('MMM DD HH:mm'),
+                        startTime: moment(devices[device][devices[device].length - 1].get('seen')).format('MMM DD HH:mm'),
+                        geometry: new ol.geom.LineString(coords)
+                      })
+                      vectorSource.addFeature(feature)
+                  })
+              }
+          }
       })
 
       var tools = [

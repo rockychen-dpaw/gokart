@@ -25,18 +25,6 @@ var env = {
     appMapping:{
         sss:"sss_uat",
     },
-    layerMapping:{
-        "dpaw:bushfirelist_latest"                  : "dpaw:bushfirelist_latest_uat",
-        "dpaw:bushfire_latest"                      : "dpaw:bushfire_latest_uat",
-        "dpaw:bushfire_final_fireboundary_latest"   : "dpaw:bushfire_final_fireboundary_latest_uat",
-        "dpaw:bushfire_fireboundary_latest"         : "dpaw:bushfire_fireboundary_latest_uat",
-        "dpaw:bushfire"                             : "dpaw:bushfire_uat",
-        "dpaw:bushfire_fireboundary"                : "dpaw:bushfire_fireboundary_uat",
-        "dpaw:resource_tracking_live"               : "dpaw:resource_tracking_live_uat",
-        "dpaw:resource_tracking_history"            : "dpaw:resource_tracking_history_uat",
-        "cddp:other_tenures"                        : "cddp:other_tenures_new"
-
-    },
     overviewLayer:"dbca:mapbox-outdoors",
 
 }

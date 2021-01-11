@@ -23,27 +23,9 @@ if (global._env) {
 }
 
 global.tour = tour
-//Return an environment dependent layer id
-global.getLayerId = function(id) {
-    return (env && env.layerMapping && env.layerMapping[id]) || id
-}
 //sometimes we use a different layer to get the detail layer information.
 global.getDetailLayerId = function(id) {
-    return (env && env.detailLayerMapping && env.detailLayerMapping[id]) || (env && env.layerMapping && env.layerMapping[id]) || id
-}
-//Return an environment independent layer id
-global.getIndependentLayerId = function(id) {
-    if (!env || !env.layerMapping) {
-        return id
-    } 
-    var independentId = id
-    $.each(env.layerMapping,function(key,value){
-        if (value === id) {
-            independentId = key
-            return false
-        }
-    })
-    return independentId
+    return (env && env.detailLayerMapping && env.detailLayerMapping[id]) || id
 }
 global.getAppId = function(id) {
     return (env && env.appMapping && env.appMapping[id]) || id
@@ -192,6 +174,7 @@ if (result) {
           // store contains state we want to reload/persist
           store: storedData,
           pngs: {},
+          layerConfigs:[]
           saved: null,
           touring: false,
           menuRevision:1,

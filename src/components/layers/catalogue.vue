@@ -41,7 +41,7 @@
     <div class="layers-flexibleframe scroller row collapse" id="catalogue-list-container">
       <div class="columns">
         <div id="layers-catalogue-list">
-          <div v-for="l in catalogue.getArray() | filterBy search in searchAttrs | orderBy 'name'" class="row layer-row" @mouseover="preview(l)" track-by="mapLayerId" @mouseleave="preview(false)" style="margin-left:0px;margin-right:0px">
+          <div v-for="l in catalogue.getArray() | filterBy search in searchAttrs | orderBy 'name'" class="row layer-row" @mouseover="preview(l)" track-by="id" @mouseleave="preview(false)" style="margin-left:0px;margin-right:0px">
             <div class="small-10">
               <div class="layer-title">{{ l.name || l.id }}</div>
             </div>
@@ -262,12 +262,14 @@ div.ol-previewmap.ol-uncollapsible {
           var layers = []
           JSON.parse(this.responseText).forEach(function (l) {
             // overwrite layers in the catalogue with the same id
+            l.layerid = l.layerid || l.id;
+            l.id = l.id || l.layerid;
+
             if (vm.getLayer(l.id)) {
                 vm.catalogue.remove(vm.getLayer(l.id))
             }
-            
-            l.layerid = l.id;
-            l.id = getIndependentLayerId(l.id);
+
+            l = $.extend(l,vm.$root.layerConfigs[l.id] || {})
             // add the base flag for layers tagged 'basemap'
             l.base = l.tags.some(function (t) {return t.name === 'basemap'})
             // set the opacity to 50% for layers tagged 'overlaymap'
@@ -282,7 +284,10 @@ div.ol-previewmap.ol-uncollapsible {
                 l.refresh = 120
             }
 
-            layers.push(l)
+            vm.map.initWFS(layer)
+            if (l.listLayer !== false) {
+                layers.push(l)
+            }   
             vm.layers[l.id] = l
           })
           vm.catalogue.extend(layers)
@@ -302,9 +307,12 @@ div.ol-previewmap.ol-uncollapsible {
       getLayer: function (id) {
         // handle openlayers layers as well as raw ids
         if (id && id.get) { id = id.get('id') }
-        return this.catalogue.getArray().find(function (layer) {
-          return layer.mapLayerId === id
-        })
+        layer = this.layers[id]
+        if (layer) {
+            return layer
+        } else {
+            throw "Layer(" + id + ") Not Found"
+        }
       },
       getMapLayer: function (id) {
         return this.$root.map.getMapLayer(id)
@@ -329,14 +337,8 @@ div.ol-previewmap.ol-uncollapsible {
             }
         }
         */
-        l.type = l.type || 'TileLayer'
+        l.type = l.type || 'WMTSLayer'
         l.legend = l.legend || ""
-        l.mapLayerId = l.mapLayerId || l.id
-        if (l.dependentLayers) {
-            $.each(l.dependentLayers,function(index,layer){
-                layer.mapLayerId = layer.mapLayerId || layer.id
-            })
-        }
 
         if (l.refresh) {
             vm.map.setRefreshInterval(l,l.refresh)

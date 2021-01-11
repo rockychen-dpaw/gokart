@@ -33,7 +33,7 @@
         <div class="tool-slice row" v-if="layerRefreshConfigable()">
           <div class="columns small-3"><label class="tool-label">Refresh:<br/>{{ formattedLayerRefreshInterval }}</label></div>
           <div class="columns small-8">
-            <input class="layer-opacity" v-if="layerRefreshIntervalConfigable()" type="range" v-bind:min="layer.min_interval" v-bind:max="layer.max_interval" v-bind:step="layer.interval_step || 1" v-model="layerRefreshInterval">
+            <input class="layer-opacity" v-if="layerRefreshIntervalConfigable()" type="range" v-bind:min="layer.minInterval" v-bind:max="layer.maxInterval" v-bind:step="layer.intervalStep || 1" v-model="layerRefreshInterval">
           </div>
           <div class="columns small-1">
             <a title="Stop auto refresh" v-if="!layerRefreshStopped" class="button tiny secondary float-right" @click="stopLayerRefresh()" ><i class="fa fa-stop"></i></a>
@@ -203,7 +203,7 @@
       },
       layerRefreshIntervalConfigable:function(id) {
         var layer = id?this.getLayer(id):this.layer
-        return ((layer.type === "WFSLayer" || layer.type === "TileLayer") && layer.refresh && layer.min_interval && layer.max_interval)?true:false
+        return ((layer.type === "WFSLayer" || layer.type === "TileLayer") && layer.refresh && layer.minInterval && layer.maxInterval)?true:false
       },
       layerRefreshProgress: function(l) {
         return this.refreshRevision && (l.progress || "")

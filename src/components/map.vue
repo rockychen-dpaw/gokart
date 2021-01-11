@@ -881,6 +881,72 @@
         }
         tileLayer.getSource().load()
       },
+      initWFS = function(layer) {
+        var params = null
+        if (layer.type == "WFSLayer") {
+          layer.wfs20 = layer.url + "?version=2.0.0&service=WFS&srsname=" + vm.env.srs + "&typeNames=" + layer.layerid
+        } else {
+          if (layer.wfsOptions) {
+              layer.wfs20 = layer.wfsOptions.url + "?version=2.0.0&service=WFS&srsname=" + vm.env.srs + "&typeNames=" + layer.wfsOptions.layerid || layer.wfsOptions.id || layer.layerid
+          }
+        }
+        layer.getWFSService = function() {
+            return (this.type == "WFSLayer")?this.url:this.wfsOptions.url
+        }
+        layer.retrieveFeatures = function (params,onSuccess,onError,rawResponse) {
+          url = this.wfs20 + "&request=GetFeature&outputFormat=application/json"
+          if (params) {
+              url = url + "&" + params
+          }
+          $.ajax({
+            url: url
+            success: function (response, stat, xhr) {
+              if (rawJson) {
+                  onSuccess(response)
+              } else {
+                  var features = vm.$root.geojson.readFeatures(response)
+                  onSuccess(features)
+              }
+            },
+            error: function (xhr,status,message) {
+                if (onError) {
+                    onError(xhr.status,xhr.responseText || message)
+                } else {
+                    alert(xhr.status + " : " + (xhr.responseText || message))
+                }
+            },
+            dataType: 'json',
+            xhrFields: {
+              withCredentials: true
+            }
+          })
+        }
+        layer.getPropertyValue = function (property,params,onSuccess,onError) {
+          url = this.wfs20 + "&request=GetPropertyValue&valueReference=" + property
+          if (params) {
+              url = url + "&" + params
+          }
+          $.ajax({
+            url: url
+            success: function (response, stat, xhr) {
+                onSuccess(response)
+            },
+            error: function (xhr,status,message) {
+                if (onError) {
+                    onError(xhr.status,xhr.responseText || message)
+                } else {
+                    alert(xhr.status + " : " + (xhr.responseText || message))
+                }
+            },
+            dataType: 'xml',
+            xhrFields: {
+              withCredentials: true
+            }
+          })
+        }
+
+
+      },
       refreshTimelineFunc:function(layer,postFetchTimelineFunc) {
         var vm = this
         var _func = null
@@ -1044,6 +1110,7 @@
       createTileWMSLayer: function (layer) {
         if (layer.mapLayer) return layer.mapLayer
         var vm = this
+
         var matrixSet = this.matrixSets[layer.params.matrixSet]
         layer.params = $.extend({
           FORMAT: 'image/jpeg',
@@ -1080,7 +1147,7 @@
           if (event.key === 'timeIndex') {
             if (layer.timeline && layer.timeline.length > 0) {
                 tileSource.updateParams({
-                  'layers': getLayerId(layer.timeline[event.target.get(event.key)][1])
+                  'layers': layer.timeline[event.target.get(event.key)][1]
                 })
             }
           }
@@ -1093,7 +1160,7 @@
 
         // set properties for use in layer selector
         tileLayer.set('name', layer.name)
-        tileLayer.set('id', layer.mapLayerId)
+        tileLayer.set('id', layer.id)
         tileLayer.layer = layer
         layer.mapLayer = tileLayer
 
@@ -1144,25 +1211,6 @@
         if (layer.mapLayer) return layer.mapLayer
         var vm = this
 
-        layer.layerid = layer.layerid || getLayerId(layer.id)
-
-        layer.params = $.extend({
-          service: 'WFS',
-          request: 'GetFeature',
-          outputFormat: 'application/json',
-          srsname: 'EPSG:4326',
-        }, layer.params || {})
-
-        if (layer.params.version == "2.0.0") {
-            if (!layer.params.typeNames) {
-                layer.params.typeNames = layer.layerid
-            }
-        } else {
-            if (!layer.params.typeName) {
-                layer.params.typeName = layer.layerid
-            }
-        }
-
         var vectorSource = new ol.source.Vector({
             features:layer.features || undefined
         })
@@ -1173,42 +1221,15 @@
         })
         vector.progress = ''
 
-        vectorSource.retrieveFeatures = function (filter,onSuccess,onError) {
-          var params = $.extend({},layer.params)
-          
-          if (filter) {
-            params.cql_filter = filter
-          } else if (params.cql_filter) {
-            delete params.cql_filter
-          }
-          $.ajax({
-            url: layer.url + '?' + $.param(params),
-            success: function (response, stat, xhr) {
-              var features = vm.$root.geojson.readFeatures(response)
-              onSuccess(features)
-            },
-            error: function () {
-                if (onError) {
-                    onError(status,message)
-                }
-            },
-            dataType: 'json',
-            xhrFields: {
-              withCredentials: true
-            }
-          })
-        }
-
         vectorSource.loadSource = function (loadType,onSuccess) {
-          if (layer.cql_filter) {
-            layer.params.cql_filter = layer.cql_filter
-          } else if (layer.params.cql_filter) {
-            delete layer.params.cql_filter
-          }
           vm.$root.active.refreshRevision += 1
           vector.progress = 'loading'
+          url = layer.wfs20 + "&request=GetFeature&outputFormat=application/json"
+          if (layer.cql_filter) {
+              url = url + "@cql_filter=" + layer.cql_filter
+          }
           $.ajax({
-            url: layer.url + '?' + $.param(layer.params),
+            url: url,
             success: function (response, stat, xhr) {
               var features = vm.$root.geojson.readFeatures(response)
               var defaultOnload = function(loadType,source,features) {
@@ -1258,8 +1279,8 @@
         }
         
         vector.set('name', layer.name)
-        vector.set('id', layer.mapLayerId)
-        vector.layer = options
+        vector.set('id', layer.id)
+        vector.layer = layer
         layer.mapLayer = vector
 
         vector.stopAutoRefresh = function() {
@@ -1301,6 +1322,7 @@
       createWMTSLayer: function (layer) {
         if (layer.mapLayer) return layer.mapLayer
         var vm = this
+
         layer.params = $.extend({
           opacity: 1,
           format: 'image/png',
@@ -1349,7 +1371,7 @@
 
         // set properties for use in layer selector
         tileLayer.set('name', layer.name,false)
-        tileLayer.set('id', layer.mapLayerId,false)
+        tileLayer.set('id', layer.id,false)
         tileLayer.layer = layer
         layer.mapLayer = tileLayer
 
@@ -1364,7 +1386,7 @@
                 if (!(layer.timeline[event.target.get(event.key)][2])) {
                     layer.timeline[event.target.get(event.key)][2] = new ol.source.WMTS({
                       url: layer.url,
-                      layer: getLayerId(layer.timeline[event.target.get(event.key)][1]),
+                      layer: layer.timeline[event.target.get(event.key)][1],
                       matrixSet: matrixSet.name,
                       format: layer.params.format,
                       style: layer.params.style,
@@ -1452,7 +1474,7 @@
       createWMSLayer: function (layer) {
         if (layer.mapLayer) return layer.mapLayer
         var vm = this
-        layer.layerid = layer.layerid || getLayerId(layer.id)
+
         layer.wmsOptions.params = $.extend({
           opacity: 1,
           format: 'image/png',
@@ -1503,7 +1525,7 @@
 
         // set properties for use in layer selector
         imgLayer.set('name', layer.name,false)
-        imgLayer.set('id', layer.mapLayerId,false)
+        imgLayer.set('id', layer.id,false)
         imgLayer.layer = layer
         layer.mapLayer = imgLayer
 
@@ -1534,7 +1556,7 @@
       enableDependentLayer:function(olLayer,dependentLayerId,enabled) {
         if (!olLayer.layer || !olLayer.layer.dependentLayers) return
 
-        var dependentLayer = olLayer.layer.dependentLayers.find(function(l) {return l.mapLayerId === dependentLayerId})
+        var dependentLayer = olLayer.layer.dependentLayers.find(function(l) {return l.id === dependentLayerId})
         
         if (!enabled) {
             //disable dependent layer
@@ -1557,7 +1579,7 @@
         var vm = this
         for(var i = olLayer.layer.dependentLayers.length - 1;i >= 0;i--) {
             l = olLayer.layer.dependentLayers[i]  
-            if (l.mapLayerId === dependentLayerId) {
+            if (l.id === dependentLayerId) {
                 vm.olmap.getLayers().insertAt(index,l.mapLayer)
                 l.mapLayer.show = true
                 vm.olmap.dispatchEvent(vm.createEvent(vm,"addLayer",{mapLayer:l.mapLayer}))
@@ -1569,7 +1591,7 @@
       },
       getMapLayer: function (id) {
         if (!this.olmap) { return undefined}
-        if (id && id.mapLayerId) { id = id.mapLayerId} // if passed a catalogue layer, get actual id
+        if (id && id.id) { id = id.id} // if passed a catalogue layer, get actual id
         return this.olmap.getLayers().getArray().find(function (layer) {
           return layer.get('id') === id
         })
@@ -1883,10 +1905,8 @@
               layers = [layers]
           }
           var _getFeature = function(index) {
-            $.ajax({
-                url:vm.env.kmiService + "/wfs?service=wfs&version=2.0&request=GetFeature&typeNames=" + getLayerId(layers[index]["id"]) + "&outputFormat=json&cql_filter=CONTAINS(" + (layers[index]["geom_field"] || "wkb_geometry") + ",POINT(" + coordinate[1]  + " " + coordinate[0] + "))",
-                dataType:"json",
-                success: function (response, stat, xhr) {
+            layers[index].retrieveFeatures("cql_filter=CONTAINS(" + (layers[index]["geom_field"] || "wkb_geometry") + ",POINT(" + coordinate[1]  + " " + coordinate[0] + "))",null,
+                function (response) {
                    if (response.totalFeatures === 0) {
                        if (index === layers.length - 1) {
                             if (successCallback) {
@@ -1914,17 +1934,15 @@
                         }
                     }
                 },
-                error: function (xhr,status,message) {
+                function (xhr,status,message) {
                     if (failedCallback) {
                         alert(xhr.status + " : " + (xhr.responseText || message))
                     } else {
                         failedCallback(xhr.status + " : " + (xhr.responseText || message))
                     }
                 },
-                xhrFields: {
-                    withCredentials: true
-                }
-            })
+                true
+            )
         }
         _getFeature(0)
       },
@@ -1937,6 +1955,8 @@
           }
           var vm = this
           var feat = new ol.Feature({geometry:new ol.geom.Point(coordinate)})
+          fd_grid_points = vm.catalogue.getLayer("cddp:fd_grid_points")
+          pilbara_grid_1km = vm.catalogue.getLayer("cddp:pilbara_grid_1km")
           $.ajax({
               url:vm.env.gokartService + "/spatial",
               dataType:"json",
@@ -1947,19 +1967,19 @@
                           action:"getClosestFeature",
                           layers:[
                               {
-                                  id:"fd_grid_points",
-                                  layerid:getLayerId("cddp:fd_grid_points"),
-                                  kmiservice:vm.env.kmiService,
+                                  id:fd_grid_points.id,
+                                  layerid:fd_grid_points.type === "WFSLayer"?fd_grid_points.layerid:fd_grid_points.wfsOptions.id,
+                                  wfsservice:fd_grid_points.type === "WFSLayer"?fd_grid_points.url:fd_grid_points.wfsOptions.url,
                                   buffer:120,
                                   properties:{
                                       grid:"fdgrid",
                                   },
                               },
                               {
-                                  id:"pilbara_grid_1km",
-                                  layerid:getLayerId("cddp:pilbara_grid_1km"),
+                                  id:pilbara_grid_1km.id,
+                                  layerid:pilbara_grid_1km.type === "WFSLayer"?pilbara_grid_1km.layerid:pilbara_grid_1km.wfsOptions.id,
                                   buffer:800,
-                                  kmiservice:vm.env.kmiService,
+                                  kmiservice:pilbara_grid_1km.type === "WFSLayer"?pilbara_grid_1km.url:pilbara_grid_1km.wfsOptions.url,
                                   properties:{
                                       grid:"id",
                                   },
@@ -1999,10 +2019,8 @@
           var vm = this
           var _getPosition = function(index) {
             var buffered = turf.bbox(turf.buffer(turf.point(coordinate),buffers[index],"kilometers"))
-            $.ajax({
-                url:vm.env.kmiService + "/wfs?service=wfs&version=2.0&request=GetFeature&typeNames=" + getLayerId("cddp:townsite_points") + "&outputFormat=json&bbox=" + buffered[1] + "," + buffered[0] + "," + buffered[3] + "," + buffered[2],
-                dataType:"json",
-                success: function (response, stat, xhr) {
+            vm.catalogue..getLayer("cddp:townsite_points").retrieveFeatures("bbox="+buffered[1] + "," + buffered[0] + "," + buffered[3] + "," + buffered[2],
+                function (response) {
                    if (response.totalFeatures === 0) {
                         _getPosition(index + 1)
                     } else {
@@ -2033,12 +2051,10 @@
                         successCallback(position)
                     }
                 },
-                error: function (xhr,status,message) {
-                    failedCallback(xhr.status + " : " + (xhr.responseText || message))
+                function (status,message) {
+                    failedCallback(status + " : " + message)
                 },
-                xhrFields: {
-                    withCredentials: true
-                }
+                true
             })
         }
         _getPosition(0)

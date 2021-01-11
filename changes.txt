@@ -13,7 +13,16 @@ Done
  12. Rename method 'createImageLayer' to 'createWMSLayer'
  13. Rename method 'createTileLayer' to 'createWMTSLayer'
  14. Rename method 'createTimelineLayer' to 'createTileWMSLayer'
+ 16: Rename the property 'min_interval' to 'minInterval'
+ 17: Rename the property 'max_interval' to 'maxInterval'
+ 18: Rename the property 'interval_step' to 'intervalStep'
+ 19. Remove 'fixedLayers' and add "layerConfigs"
+ 20. Attach the method 'retrieveFeatures' from layer source to layer
+ 21. Remove 'layerMapping' from env file 
+ 22. Remove 'getIndependentLayerId' from sss.vue
+ 23. Change 'getLayer' in catalogue.vue to use property 'layers' instead of property 'catalogue'
+ 24. Remove 'mapLayerId' from catalogue.vue, use 'id' as 'mapLayerId'
+ 25. Remove 'getLayerId' from sss.js
 
 Doing
  1.remove 'kmiService' in browser side
- 2. Remove 'fixedLayers' from sss.js
