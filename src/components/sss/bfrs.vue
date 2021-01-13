@@ -1448,7 +1448,7 @@
                         ]
                     }
                     $.ajax({
-                        url:vm.env.gokartService + "/spatial",
+                        url:"/spatial",
                         dataType:"json",
                         data:{
                                 features:vm.$root.geojson.writeFeatures([feat]),

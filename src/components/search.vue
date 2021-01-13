@@ -117,53 +117,31 @@
       },
       queryFD: function(fdStr, victory, failure) {
         var vm = this
-        $.ajax({
-          url: vm.env.kmiService + '/wfs?' + $.param({
-            version: '1.1.0',
-            service: 'WFS',
-            request: 'GetFeature',
-            outputFormat: 'application/json',
-            srsname: 'EPSG:4326',
-            typename: 'cddp:fd_grid_points_mapping',
-            cql_filter: '(fdgrid = \''+fdStr+'\')'
-          }),
-          dataType: 'json',
-          xhrFields: {
-            withCredentials: true
-          },
-          success: function(data, status, xhr) {
+        vm,.getLayer('cddp:fd_grid_points_mapping').retrieveFeatures("cql_filter=(fdgrid = '" + fdStr + "')",
+           function(data {
             if (data.features.length) {
               victory("FD",data.features[0].geometry.coordinates, "FD "+fdStr)
             } else {
               failure('No Forest Department Grid reference found for '+fdStr)
             }
-          }
-        })
+          },
+          null,
+          true
+        )
       },
       queryPIL: function(pilStr, victory, failure) {
         var vm = this
-        $.ajax({
-          url: vm.env.kmiService + '/wfs?' + $.param({
-            version: '1.1.0',
-            service: 'WFS',
-            request: 'GetFeature',
-            outputFormat: 'application/json',
-            srsname: 'EPSG:4326',
-            typename: 'cddp:pilbara_grid_10km_mapping',
-            cql_filter: '(grid = \''+pilStr+'\')'
-          }),
-          dataType: 'json',
-          xhrFields: {
-            withCredentials: true
-          },
-          success: function(data, status, xhr) {
+        vm,.getLayer('cddp:pilbara_grid_10km_mapping').retrieveFeatures("cql_filter=(grid = '" + pilStr + "')",
+          function(data) {
             if (data.features.length) {
               victory("PIL",data.features[0].geometry.coordinates, "PIL "+pilStr)
             } else {
               failure('No Pilbara Grid reference found for '+pilStr)
             }
-          }
-        })
+          },
+          null,
+          true
+        )
       },
       queryGeocode: function(geoStr, victory, failure) {
         var vm = this
@@ -172,8 +150,7 @@
             center = this._wa_perth
         }
         $.ajax({
-          url: vm.env.gokartService
-            +'/mapbox/geocoding/v5/mapbox.places/'+encodeURIComponent(geoStr)+'.json?' + $.param({
+          url: '/mapbox/geocoding/v5/mapbox.places/'+encodeURIComponent(geoStr)+'.json?' + $.param({
             country: 'au',
             //types: 'country,region,postcode,place,locality,address',
             proximity: ''+center[0]+','+center[1]

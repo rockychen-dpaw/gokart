@@ -23,6 +23,11 @@ Done
  23. Change 'getLayer' in catalogue.vue to use property 'layers' instead of property 'catalogue'
  24. Remove 'mapLayerId' from catalogue.vue, use 'id' as 'mapLayerId'
  25. Remove 'getLayerId' from sss.js
+ 26. Remove 'detailLayerMapping' from env file
+ 27. Remove 'getDetailLayerId' from sss.js
+ 28. remove 'kmiService' in browser side
+ 29. remove 'appMapping' from env file
+ 30. remove 'getAppId' from sss.js
+ 30. remove 'gokartService' from env file
 
 Doing
- 1.remove 'kmiService' in browser side

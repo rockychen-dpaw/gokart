@@ -23,13 +23,6 @@ if (global._env) {
 }
 
 global.tour = tour
-//sometimes we use a different layer to get the detail layer information.
-global.getDetailLayerId = function(id) {
-    return (env && env.detailLayerMapping && env.detailLayerMapping[id]) || id
-}
-global.getAppId = function(id) {
-    return (env && env.appMapping && env.appMapping[id]) || id
-}
 
 global.debounce = function (func, wait, immediate) {
   // Returns a function, that, as long as it continues to be invoked, will not
@@ -145,8 +138,6 @@ var persistentData = {
   //data in settings will survive across reset
   settings:JSON.parse(JSON.stringify(systemSettings))
 }
-global.gokartService = env.gokartService;
-
 global.localforage = localforage
 global.$ = $
 

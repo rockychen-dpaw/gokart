@@ -55,7 +55,7 @@ var saveAs = function (blob,name,no_auto_bom) {
         var formData = new window.FormData();
         formData.append('file', blob, name);
         var req = new window.XMLHttpRequest();
-        req.open('POST', gokartService + '/saveas');
+        req.open('POST', '/saveas');
         req.withCredentials = true;
         req.responseType = 'text';
         req.onload = function (event) {

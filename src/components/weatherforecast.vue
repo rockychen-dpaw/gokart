@@ -1,5 +1,5 @@
 <template>
-    <form id="get_weatherforecast" name="weatherforecast" action="{{env.gokartService + '/weatherforecast'}}" method="post" target="weatherforecast">
+    <form id="get_weatherforecast" name="weatherforecast" action="{{'/weatherforecast'}}" method="post" target="weatherforecast">
         <input type="hidden" name="data" id="weatherforecast_data">
     </form>
 </template>

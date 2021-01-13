@@ -1958,7 +1958,7 @@
           fd_grid_points = vm.catalogue.getLayer("cddp:fd_grid_points")
           pilbara_grid_1km = vm.catalogue.getLayer("cddp:pilbara_grid_1km")
           $.ajax({
-              url:vm.env.gokartService + "/spatial",
+              url:"/spatial",
               dataType:"json",
               data:{
                   features:vm.$root.geojson.writeFeatures([feat]),

@@ -420,7 +420,7 @@
             }
             try{
                 var req = new window.XMLHttpRequest()
-                req.open('POST', vm.env.gokartService + '/download/' + format)
+                req.open('POST', '/download/' + format)
                 req.responseType = 'blob'
                 req.withCredentials = true
                 req.onload = function (event) {
@@ -514,7 +514,7 @@
                 var formData = new window.FormData()
                 formData.append('datasource', new window.Blob([e.target.result],{type:fileFormat[2]}), file.name)
                 var req = new window.XMLHttpRequest()
-                req.open('POST', vm.env.gokartService + '/ogrinfo')
+                req.open('POST', '/ogrinfo')
                 req.responseType = 'blob'
                 req.withCredentials = true
                 req.onload = function (event) {
@@ -592,7 +592,7 @@
                         vm._importData = {formData:new window.FormData(),callback:callback,failedCallback:failedCallback}
                         vm._importData.formData.append('datasource', new window.Blob([e.target.result],{type:fileFormat[2]}), file.name)
                         var req = new window.XMLHttpRequest()
-                        req.open('POST', vm.env.gokartService + '/ogrinfo')
+                        req.open('POST', '/ogrinfo')
                         req.responseType = 'blob'
                         req.withCredentials = true
                         req.onload = function (event) {
@@ -693,7 +693,7 @@
             }
             this._importData.formData.append('layers', JSON.stringify(layers))
             var req = new window.XMLHttpRequest()
-            req.open('POST', this.env.gokartService + '/download/geojson')
+            req.open('POST', '/download/geojson')
             req.responseType = 'text'
             req.withCredentials = true
             req.onload = function (event) {
@@ -858,7 +858,7 @@
                 formData.append('bucket_key',bucketKey)
             }
             var req = new window.XMLHttpRequest()
-            req.open('POST', vm.env.gokartService + '/gdal/' + format)
+            req.open('POST', '/gdal/' + format)
             req.withCredentials = true
             req.responseType = 'blob'
             req.onload = function (event) {
