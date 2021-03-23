@@ -500,8 +500,6 @@ def _calculateArea(feature,session_cookies,options,run_in_other_process=False):
             layer["layerid"] = layer["id"]
         elif "id" not in layer:
             layer["id"] = layer["layerid"]
-        if not layer.get("kmiservice"):
-            layer["kmiservice"] = settings.KMI_SERVER
 
     area_data["layers"] = {}
     areas_map = {} if merge_result else None
@@ -677,8 +675,6 @@ def getFeature(feature,session_cookies,options):
             layer["layerid"] = layer["id"]
         elif "id" not in layer:
             layer["id"] = layer["layerid"]
-        if not layer.get("kmiservice"):
-            layer["kmiservice"] = settings.KMI_SERVER
 
     get_feature_data = {"id":None,"layer":None,"failed":None}
 

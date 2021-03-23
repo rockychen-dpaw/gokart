@@ -165,7 +165,7 @@ if (result) {
           // store contains state we want to reload/persist
           store: storedData,
           pngs: {},
-          layerConfigs:[]
+          layerConfigs:[],
           saved: null,
           touring: false,
           menuRevision:1,

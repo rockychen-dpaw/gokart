@@ -13,9 +13,9 @@ except:
 import xml.etree.ElementTree as ET
 
 
-def get_child_value(node,child_name):
+def get_child_value(node,child_name,namespaces):
     try:
-        return node.find(child_name).text
+        return node.find(child_name,namespaces=namespaces).text
     except:
         return None
 
@@ -25,63 +25,45 @@ def layermetadatakey(layerid):
 def layerdefinitionkey(layerid):
     return "layerdefinition_{}".format(layerid)
 
-def get_kmiserver(kmiserver=settings.KMI_SERVER):
-    kmiserver = kmiserver or settings.KMI_SERVER
+def get_kmiserver(kmiserver):
     if  kmiserver.endswith("/"):
         kmiserver = kmiserver[:-1]
     return kmiserver
 
-def get_layermetadata(layerids,kmiserver=settings.KMI_SERVER,results={}):
+def get_layermetadata(layers,results={}):
     multiple_layers = True
-    if isinstance(layerids,basestring):
-        layerids = [layerids]
+    if isinstance(layers,dict):
+        layerids = [layers]
         multiple_layers = False
     #group layers against layer workspace
-    layers = {}
-    for layerid in layerids:
-        layerid = layerid.strip()
+    unresolved_layers = {}
+    for layer in layers:
         #check whether it is cached or not
-        key = layermetadatakey(layerid)
+        key = layermetadatakey(layer.id)
         if uwsgi.cache_exists(key):
             try:
                 metadata = uwsgi.cache_get(key)
                 if metadata:
-                    if layerid in results:
-                        results[layerid].update(json.loads(metadata))
+                    if layer.id in results:
+                        results[layer.id].update(json.loads(metadata))
                     else:
-                        results[layerid] = json.loads(metadata)
+                        results[layer.id] = json.loads(metadata)
                     #print("Retrieve the metadata from cache for layer ({})".format(layerid))
                     continue
             except:
                 pass
 
-        layer = layerid.split(":")
-
-        if len(layer) == 1:
-            #no workspace
-            layer_ws = ""
-            layer = layer[0]
+        if layer.wfsservice in unrsolved_layers:
+            unresolved_layers[layer.wfsservice].append(layer.id)
         else:
-            layer_ws = layer[0]
-            layer = layer[1]
+            unresolved_layers[layer.wfsservice] = [layer.id]
 
-        if layer_ws not in layers:
-            layers[layer_ws] = [layer]
-        else:
-            layers[layer_ws].append(layer)
-
-
-    if layers:
+    if unresolved_layers:
         session_cookie = settings.get_session_cookie()
-        kmiserver = get_kmiserver(kmiserver)
         #find the layer's metadata 
         url = None
-        for layer_ws,layers in layers.iteritems():
-            if layer_ws:
-                url = "{}/{}/wms?service=wms&version=1.1.1&request=GetCapabilities".format(kmiserver,layer_ws)
-            else:
-                url = "{}/wms?service=wms&version=1.1.1&request=GetCapabilities".format(kmiserver)
-    
+        for wfsservice, layerids in unresolved_layers:
+            url = "{}?service=wfs&version=2.0.0&request=GetCapabilities".format(wfsservice)
             res = requests.get(
                 url,
                 verify=False,
@@ -89,46 +71,42 @@ def get_layermetadata(layerids,kmiserver=settings.KMI_SERVER,results={}):
             )
             res.raise_for_status()
     
+            namespaces = dict([(node[0].encode(),node[1]) for _, node in ET.iterparse(res.content.decode(), events=['start-ns'])])
+
             tree = ET.fromstring(res.content)
 
-            capability = tree.find('Capability')
+            capability = tree.find('wfs:FeatureTypeList',namespaces=namespaces)
             if not len(capability):
                 raise Exception("getCapability failed")
-            kmi_layers = capability.findall("Layer")
-            while kmi_layers:
-                kmi_layer = kmi_layers.pop()
-                name = get_child_value(kmi_layer,"Name")
+            kmi_layers = capability.findall("wfs:FeatureType",namespaces=namespaces)
+            for kmi_layer in kmi_layers:
+                name = get_child_value(kmi_layer,"wfs:Name",namespaces)
                 
                 if name:
                     try:
-                        index = layers.index(name)
+                        index = layerids.index(name)
                     except:
                         index = -1
                     if index >= 0:
                         #this layer's metadata is requsted by the user
-                        if layer_ws:
-                            layerid = "{}:{}".format(layer_ws,name)
+                        if name in results:
+                            result = results[name]
                         else:
-                            layerid = name
+                            result = {"id":name}
+                            results[name] = result
 
-                        if layerid in results:
-                            result = results[layerid]
-                        else:
-                            result = {"id":layerid}
-                            results[layerid] = result
-
-                        del layers[index]
+                        del layerids[index]
     
-                        result["title"] = get_child_value(kmi_layer,"Title")
-                        result["abstract"] = get_child_value(kmi_layer,"Abstract")
-                        result["srs"] = get_child_value(kmi_layer,"SRS")
-                        bbox = kmi_layer.find("LatLonBoundingBox")
+                        result["title"] = get_child_value(kmi_layer,"wfs:Title",namespaces)
+                        result["abstract"] = get_child_value(kmi_layer,"wfs:Abstract",namespaces)
+                        result["srs"] = get_child_value(kmi_layer,"wfs:DefaultCRS",namespaces)
+                        bbox = kmi_layer.find("ows:WGS84BoundingBox",namespaces=namespaces)
                         if bbox is  not None:
-                            result["latlonBoundingBox"] = [float(bbox.attrib["miny"]),float(bbox.attrib["minx"]),float(bbox.attrib["maxy"]),float(bbox.attrib["maxx"])]
+                            lowercorner = get_child_value(bbox,"ows:LowerCorner",namespaces).split()
+                            uppercorner = get_child_value(bbox,"ows:UpperCorner",namespaces).split()
+                            result["latlonBoundingBox"] = [float(lowercorner[1]),float(lowercorner[0]),float(uppercorner[1]),float(uppercorner[0])]
                         else:
                             result["latlonBoundingBox"] = None
-                        for bbox in kmi_layer.findall("BoundingBox"):
-                            result["latlonBoundingBox_{}".format(bbox.attrib["SRS"].upper())] = [float(bbox.attrib["miny"]),float(bbox.attrib["minx"]),float(bbox.attrib["maxy"]),float(bbox.attrib["maxx"])]
     
                         #cache it for 6 hours
                         key = layermetadatakey(result["id"])
@@ -142,81 +120,52 @@ def get_layermetadata(layerids,kmiserver=settings.KMI_SERVER,results={}):
                             
                         #print("Retrieve the metadata from kmi for layer ({})".format(result["id"]))
     
-                        if len(layers):
+                        if len(layerids):
                             continue
                         else:
                             #already find metadata for all required layers
                             break
-                sub_layers = kmi_layer.findall("Layer")
-                if sub_layers:
-                    kmi_layers += sub_layers
             
-            if len(layers) == 1:
-                if layer_ws:
-                    raise Exception("The layer({}:{}) Not Found".format(layer_ws,layers[0]))
-                else:
-                    raise Exception("The layer({}) Not Found".format(layers[0]))
-            elif len(layers) > 1:
-                if layer_ws:
-                    raise Exception("The layers({}) Not Found".format(",".join(["{}:{}".format(layer_ws,l) for l in layers])))
-                else:
-                    raise Exception("The layers({}) Not Found".format(",".join(layers)))
+            if len(layerids) == 1:
+                raise Exception("The layer({}) Not Found in WFS Service({})".format(layerids[0],wfsservice))
+            elif len(layerids) > 1:
+                raise Exception("The layers({}) Not Found in WFS Service({})".format(",".join(layerids),wfsservice))
 
     if multiple_layers:
         return results
     else:
-        return results[layerids[0]]
+        return results[layers[0].id]
 
-def get_layerdefinition(layerids,kmiserver=settings.KMI_SERVER,results={}):
-    kmiserver = get_kmiserver(kmiserver)
-
+def get_layerdefinition(layers,results={}):
     multiple_layers = True
-    if isinstance(layerids,basestring):
-        layerids = [layerids]
+    if isinstance(layers,dict):
+        layerids = [layers]
         multiple_layers = False
     #group layers against layer workspace
-    layers = {}
-    for layerid in layerids:
-        layerid = layerid.strip()
+    unresolved_layers = []
+    for layer in layers:
         #check whether it is cached or not
-        key = layerdefinitionkey(layerid)
+        key = layerdefinitionkey(layer.id)
         if uwsgi.cache_exists(key):
             try:
                 definitiondata = uwsgi.cache_get(key)
                 if definitiondata:
                     if layerid in results:
-                        results[layerid].update(json.loads(definitiondata))
+                        results[layer.id].update(json.loads(definitiondata))
                     else:
-                        results[layerid] = json.loads(definitiondata)
+                        results[layer.id] = json.loads(definitiondata)
                     continue
             except:
                 pass
 
-        layer = layerid.split(":")
+        unresolved_layers.append(layer)
 
-        if len(layer) == 1:
-            #no workspace
-            layer_ws = ""
-            layer = layer[0]
-        else:
-            layer_ws = layer[0]
-            layer = layer[1]
-
-        if layer_ws not in layers:
-            layers[layer_ws] = [layerid]
-        else:
-            layers[layer_ws].append(layerid)
-
-    if layers:
-        kmiserver = get_kmiserver(kmiserver)
+    if unresolved_layers:
         session_cookie = settings.get_session_cookie()
 
         url = None
-        for layer_ws,layers in layers.iteritems():
-            if layer_ws:
-                url = "{}/{}/wfs?request=DescribeFeatureType&version=2.0.0&service=WFS&outputFormat=application%2Fjson&typeName=".format(kmiserver,layer_ws,",".join(layers))
-            else:
-                url = "{}/wfs?request=DescribeFeatureType&version=2.0.0&service=WFS&outputFormat=application%2Fjson&typeName=".format(kmiserver,",".join(layers))
+        for wfsservice,layerids in unresolved_layers:
+            url = "{}?request=DescribeFeatureType&version=2.0.0&service=WFS&outputFormat=application%2Fjson&typeName=".format(wfsservice,",".join(layerids))
 
             res = requests.get(
                 url,
@@ -328,17 +277,14 @@ def get_layerdefinition(layerids,kmiserver=settings.KMI_SERVER,results={}):
 
 def layermetadata():
     try:
-        kmiserver = bottle.request.query.get("server") 
-        kmiserver = get_kmiserver(kmiserver)
-        
         layers = bottle.request.query.get("layers")
         if not layers:
             raise Exception("Missing parameter 'layers'")
         else:
-            layers = [l.strip() for l in layers.split(",") if l.strip()]
+            layers = json.loads(layers)
 
         bottle.response.set_header("Content-Type", "application/json")
-        results = get_layermetadata(layers,kmiserver)
+        results = get_layermetadata(layers)
         results = get_layerdefinition(layers,kmiserver,results=results)
         if len(layers) == 1:
             return results[layers[0]]

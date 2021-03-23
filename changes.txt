@@ -28,6 +28,7 @@ Done
  28. remove 'kmiService' in browser side
  29. remove 'appMapping' from env file
  30. remove 'getAppId' from sss.js
- 30. remove 'gokartService' from env file
+ 31. remove 'gokartService' from env file
+ 32. remove 'KMI_SERVER' from .env file
 
 Doing

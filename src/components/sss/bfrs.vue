@@ -915,7 +915,7 @@
                                 function (status,message) {
                                     vm._validateBushfireCallback(status + ":" + message,callback)
                                 }
-                            })
+                            )
                         } else {
                             //during modifing,check agaist the bbox of fire boundary
                             if (ol.extent.containsCoordinate(feat.get('fire_boundary'),originPoint)) {
@@ -1400,7 +1400,7 @@
 
                         layers = [
                             {
-                                id:legislated_lands_and_waters.id,,
+                                id:legislated_lands_and_waters.id,
                                 layerid:legislated_lands_and_waters.layerid,
                                 cqlfilter:"category<>'State Forest'",
                                 wfsService:legislated_lands_and_waters.getWFSService(),

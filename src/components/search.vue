@@ -117,13 +117,13 @@
       },
       queryFD: function(fdStr, victory, failure) {
         var vm = this
-        vm,.getLayer('cddp:fd_grid_points_mapping').retrieveFeatures("cql_filter=(fdgrid = '" + fdStr + "')",
-           function(data {
-            if (data.features.length) {
-              victory("FD",data.features[0].geometry.coordinates, "FD "+fdStr)
-            } else {
-              failure('No Forest Department Grid reference found for '+fdStr)
-            }
+        vm.getLayer('cddp:fd_grid_points_mapping').retrieveFeatures("cql_filter=(fdgrid = '" + fdStr + "')",
+           function(data) {
+              if (data.features.length) {
+                  victory("FD",data.features[0].geometry.coordinates, "FD "+fdStr)
+              } else {
+                  failure('No Forest Department Grid reference found for '+fdStr)
+              }
           },
           null,
           true
@@ -131,13 +131,13 @@
       },
       queryPIL: function(pilStr, victory, failure) {
         var vm = this
-        vm,.getLayer('cddp:pilbara_grid_10km_mapping').retrieveFeatures("cql_filter=(grid = '" + pilStr + "')",
+        vm.getLayer('cddp:pilbara_grid_10km_mapping').retrieveFeatures("cql_filter=(grid = '" + pilStr + "')",
           function(data) {
-            if (data.features.length) {
-              victory("PIL",data.features[0].geometry.coordinates, "PIL "+pilStr)
-            } else {
-              failure('No Pilbara Grid reference found for '+pilStr)
-            }
+              if (data.features.length) {
+                  victory("PIL",data.features[0].geometry.coordinates, "PIL "+pilStr)
+              } else {
+                  failure('No Pilbara Grid reference found for '+pilStr)
+              }
           },
           null,
           true

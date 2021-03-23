@@ -881,7 +881,7 @@
         }
         tileLayer.getSource().load()
       },
-      initWFS = function(layer) {
+      initWFS : function(layer) {
         var params = null
         if (layer.type == "WFSLayer") {
           layer.wfs20 = layer.url + "?version=2.0.0&service=WFS&srsname=" + vm.env.srs + "&typeNames=" + layer.layerid
@@ -899,7 +899,7 @@
               url = url + "&" + params
           }
           $.ajax({
-            url: url
+            url: url,
             success: function (response, stat, xhr) {
               if (rawJson) {
                   onSuccess(response)
@@ -927,7 +927,7 @@
               url = url + "&" + params
           }
           $.ajax({
-            url: url
+            url: url,
             success: function (response, stat, xhr) {
                 onSuccess(response)
             },
@@ -1127,7 +1127,7 @@
         var tileSource = new ol.source.TileWMS({
           params: layer.params,
           tileGrid: new ol.tilegrid.TileGrid({
-            extent: matrixSet.extent,,
+            extent: matrixSet.extent,
             resolutions: this.resolutions,
             tileSize: [matrixSet.tileSize, matrixSet.tileSize]
           })
@@ -1328,7 +1328,7 @@
           format: 'image/png',
           matrixSet:'gda94',
           style: ''
-        }, options.params)
+        }, layer.params || {})
 
         // create a tile grid using the stock KMI resolutions
         var matrixSet = this.matrixSets[layer.params.matrixSet]
@@ -2019,7 +2019,7 @@
           var vm = this
           var _getPosition = function(index) {
             var buffered = turf.bbox(turf.buffer(turf.point(coordinate),buffers[index],"kilometers"))
-            vm.catalogue..getLayer("cddp:townsite_points").retrieveFeatures("bbox="+buffered[1] + "," + buffered[0] + "," + buffered[3] + "," + buffered[2],
+            vm.catalogue.getLayer("cddp:townsite_points").retrieveFeatures("bbox="+buffered[1] + "," + buffered[0] + "," + buffered[3] + "," + buffered[2],
                 function (response) {
                    if (response.totalFeatures === 0) {
                         _getPosition(index + 1)
@@ -2055,7 +2055,7 @@
                     failedCallback(status + " : " + message)
                 },
                 true
-            })
+            )
         }
         _getPosition(0)
       },

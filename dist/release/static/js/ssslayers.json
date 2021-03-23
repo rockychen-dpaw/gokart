@@ -1,0 +1,184 @@
+[{
+    "name": "Himawari-8 Hotspots",
+    "id": "himawari8:hotspots",
+    "type": "TileWMSLayer",
+    "params": {
+        "format":"image/png",
+        "matrixSet":"gda94"
+    },
+    "opacity": 1,
+    "timelineRefresh":300,
+    "fetchTimelineUrl":"/hi8/AHI_TKY_FHS?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "url": "/mapproxy/firewatch/service"
+},{
+    "name": "Himawari-8 True Colour",
+    "id": "himawari8:bandtc",
+    "type": "TileWMSLayer",
+    "params": {
+        "format": "image/jpeg",
+        "matrixSet":"gda94"
+    },
+    "opacity": 1,
+    "timelineRefresh":300,
+    "fetchTimelineUrl":"/hi8/AHI_TKY_b321?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "url": "/mapproxy/firewatch/service"
+},{
+    "name": "Himawari-8 Band 7",
+    "id": "himawari8:band7",
+    "type": "TileWMSLayer",
+    "params": {
+        "format": "image/jpeg",
+        "matrixSet":"gda94"
+    },
+    "opacity": 1,
+    "timelineRefresh":300,
+    "fetchTimelineUrl":"/hi8/AHI_TKY_b7?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "url": "/mapproxy/firewatch/service"
+}, {
+   "name": "Forest Fire Danger Index",
+   "id": "bom:forest_fire_danger_index",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "timelineRefresh":300,
+   "fetchTimelineUrl":"/bom/IDZ71117?basetimelayer=bom:IDZ71117_datetime&timelinesize=72&layertimespan=3600"
+}, {
+   "name": "Maximum Forest Fire Danger Index",
+   "id": "bom:maximum_forest_fire_danger_index",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "timelineRefresh":300,
+   "fetchTimelineUrl":"/bom/IDZ71118?basetimelayer=bom:IDZ71118_datetime&timelinesize=4&layertimespan=86400"
+}, {
+   "name": "Grassland Fire Danger Index",
+   "id": "bom:grass_fire_danger_index",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "timelineRefresh":300,
+   "fetchTimelineUrl":"/bom/IDZ71122?basetimelayer=bom:IDZ71122_datetime&timelinesize=72&layertimespan=3600"
+}, {
+   "name": "Maximum Grassland Fire Danger Index",
+   "id": "bom:maximum_grass_fire_danger_index",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "timelineRefresh":300,
+   "fetchTimelineUrl":"/bom/IDZ71123?basetimelayer=bom:IDZ71123_datetime&timelinesize=4&layertimespan=86400"
+}, {
+   "name": "Continuous Haines",
+   "id": "bom:continuous_haines",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "timelineRefresh":300,
+   "fetchTimelineUrl":"/bom/IDZ71115?basetimelayer=bom:IDZ71115_datetime&timelinesize=56&layertimespan=10800"
+},{
+   "name":"Bushfire Report",
+   "id": "dpaw:bushfirelist_latest",
+   "type":"WFSLayer",
+   "refresh":300,
+   "minInterval":60,
+   "maxInterval":600,
+   "intervalStep":60,
+   "dependentLayers":["dpaw:bushfire_final_fireboundary_latest","dpaw:bushfire_final_fireboundary_latest"]
+},{
+   "name":"Fire Boundary of Bushfire Final Report",
+   "id": "dpaw:bushfire_final_fireboundary_latest",
+   "type":"WMTSLayer",
+   "abstract":"",
+   "opacity": 1,
+   "params":{
+       "format": "image/png",
+       "matrixSet":"gda94",
+       "style": ""
+   }
+
+},{
+   "name":"Fire Boundary of Selected Bushfire Final Report",
+   "id": "dpaw:bushfire_final_fireboundary_latest_selected",
+   "layerid": "dpaw:bushfire_final_fireboundary_latest",
+   "type":"WMSLayer",
+   "abstract":"",
+   "opacity": 1,
+   "params": {
+      "style":"dpaw:bushfire_final_fireboundary_latest.selected"
+   }
+},{
+   "name":"Resource Tracking",
+   "id": "dpaw:resource_tracking_live",
+   "layeid": "dpaw:resource_tracking_live",
+   "type":"WFSLayer",
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs",
+   "refresh":60
+},{
+   "name":"Resource Tracking History",
+   "id": "dpaw:resource_tracking_history",
+   "type":"WFSLayer",
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+},{
+   "name":"cddp:townsite_points",
+   "id": "cddp:townsite_points",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+
+},{
+   "name":"legislated_lands_and_waters",
+   "id": "legislated_lands_and_waters",
+   "layerid":"cddp:legislated_lands_and_waters",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+},{
+   "name":"state_forest_plantation_distribution",
+   "id": "state_forest_plantation_distribution",
+   "layerid":"cddp:state_forest_plantation_distribution",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+},{
+   "name":"dept_interest_lands_and_waters",
+   "id": "dept_interest_lands_and_waters",
+   "layerid":"cddp:dept_interest_lands_and_waters",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+},{
+   "name":"other_tenures",
+   "id": "other_tenures",
+   "layerid":"cddp:other_tenures",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+},{
+   "name":"sa_nt_burntarea",
+   "id": "sa_nt_burntarea",
+   "layerid":"cddp:sa_nt_state_polygons_burntarea",
+   "type":"WFSLayer",
+   "listLayer":false,
+   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+
+}]
+

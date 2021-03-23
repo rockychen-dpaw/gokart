@@ -190,7 +190,7 @@ def get_profile(app):
         return traceback.format_exception_only(*sys.exc_info()[:2])
 
 # serve up map apps
-@bottle.route('/<app>')
+@bottle.route('/<app:re:[a-zA-Z0-9]+>')
 def index(app):
     try:
         profile = _get_profile(app)
