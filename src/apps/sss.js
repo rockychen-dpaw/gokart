@@ -304,23 +304,21 @@ if (result) {
           self.store.dpmm = self.dpi / self.store.mmPerInch
           $('#dpi').remove();
           // get user info
-          (function () {
-            $.ajax({
-                url: "/sso/auth",
-                method:"GET",
-                dataType:"json",
-                success: function (response, stat, xhr) {
-                    $.extend(self.store.whoami,response)
-                },
-                error: function (xhr,status,message) {
-                    $.extend(self.store.whoami,{"username": "RockyC", "shared_id": "a73351f6262821b04179c559750079b312846cc8a9a2262f3314609dacc2ced3", "first_name": "Rocky", "last_name": "Chen", "client_logon_ip": "139.130.215.10", "session_key": "arnpq7peh8l8eae70calje7lk4gfqprt", "email": "rocky.chen@dbca.wa.gov.au"})
-                    //alert("Get user profile failed.  " + status + " : " + (xhr.responseText || message))
-                },
-                xhrFields: {
-                  withCredentials: true
-                }
-            })
-          })()
+          $.ajax({
+              url: "/sso/auth",
+              method:"GET",
+              dataType:"json",
+              success: function (response, stat, xhr) {
+                  $.extend(self.store.whoami,response)
+              },
+              error: function (xhr,status,message) {
+                  $.extend(self.store.whoami,{"username": "RockyC", "shared_id": "a73351f6262821b04179c559750079b312846cc8a9a2262f3314609dacc2ced3", "first_name": "Rocky", "last_name": "Chen", "client_logon_ip": "139.130.215.10", "session_key": "arnpq7peh8l8eae70calje7lk4gfqprt", "email": "rocky.chen@dbca.wa.gov.au"})
+                  //alert("Get user profile failed.  " + status + " : " + (xhr.responseText || message))
+              },
+              xhrFields: {
+                withCredentials: true
+              }
+          })
           // bind menu side-tabs to reveal the side pane
           var offCanvasLeft = $('#offCanvasLeft')
           $('#menu-tabs').on('change.zf.tabs', function (ev) {
@@ -562,7 +560,7 @@ if (result) {
               })
           } catch(err) {
               //some exception happens
-              self.loading.app.failed(err)
+              self.loading.app.phaseFailed(err)
               throw err
           }
         }

@@ -69,7 +69,7 @@ def _get_profile(app):
         file_data = None
         with open(appPath, "rb") as f:
             file_data = f.read()
-        m = profile_re.search(file_data.decode())
+        m = profile_re.search(file_data.decode("utf-8"))
         profile = {
             'mtime': repr(os.path.getmtime(appPath)),
             'size': os.path.getsize(appPath),
@@ -261,8 +261,9 @@ def himawari8(target):
     last_updatetime = bottle.request.query.get("updatetime")
     getLayers = bottle.request.query.get("getLayers")
     https_verify = (bottle.request.query.get("https_verify") or "true").lower() == "true"
+    baseUrl = bottle.request.url[0:bottle.request.url.find("/hi8")]
     if not getLayers.startswith("http"):
-        getLayers = "{}{}".format(bottle.request.url[0:bottle.request.url.find("/hi8")],getLayers)
+        getLayers = "{}{}".format(baseUrl,getLayers)
 
     key = "himawari8.{}".format(target)
     result = None
@@ -271,13 +272,13 @@ def himawari8(target):
         if uwsgi.cache_exists(key):
             result = json.loads(uwsgi.cache_get(key))
         else:
-            getcaps = uwsgi.cache_get("himawari8")
+            getcaps = uwsgi.cache_get("himawari8").decode("utf-8")
     else:
         res = requests.get(getLayers,verify=https_verify)
         res.raise_for_status()
         getcaps = res.content
-        getcaps = getcaps.decode("utf-8")
         uwsgi.cache_set("himawari8", getcaps, 60*10)  # cache for 10 mins
+        getcaps = getcaps.decode("utf-8")
 
     if not result:
         layernames = re.findall("\w+HI8\w+{}\.\w+".format(target), getcaps)

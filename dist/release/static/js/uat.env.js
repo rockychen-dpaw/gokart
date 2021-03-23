@@ -2,7 +2,7 @@ var env = {
     appType: (window.location.protocol == "file:")?"cordova":"webapp",
     
     srs:"EPSG:4326",
-    layers:'http://127.0.0.1:8080/dist/static/js/ssslayers.json',
+    layers:'https://sss-dev.dbca.wa.gov.au/dist/static/js/ssslayers.json',
     //layers:"https://csw.dpaw.wa.gov.au/catalogue/api/records/?format=json&application__name=sss" ,
 
 

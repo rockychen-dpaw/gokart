@@ -263,12 +263,14 @@ div.ol-previewmap.ol-uncollapsible {
           JSON.parse(this.responseText).forEach(function (l) {
             // overwrite layers in the catalogue with the same id
             l.layerid = l.layerid || l.id;
+            l.params = l.params || {};
             l.id = l.id || l.layerid;
 
             if (vm.getLayer(l.id)) {
                 vm.catalogue.remove(vm.getLayer(l.id))
             }
 
+            l.tags = l.tags || []
             l = $.extend(l,vm.$root.layerConfigs[l.id] || {})
             // add the base flag for layers tagged 'basemap'
             l.base = l.tags.some(function (t) {return t.name === 'basemap'})
@@ -284,7 +286,7 @@ div.ol-previewmap.ol-uncollapsible {
                 l.refresh = 120
             }
 
-            vm.map.initWFS(layer)
+            vm.map.initWFS(l)
             if (l.listLayer !== false) {
                 layers.push(l)
             }   
@@ -301,7 +303,7 @@ div.ol-previewmap.ol-uncollapsible {
             console.error(msg)
           }
         }
-        req.open('GET', vm.env.layers)
+        req.open('GET', vm.env.layers,false)
         req.send()
       },
       getLayer: function (id) {
@@ -311,7 +313,7 @@ div.ol-previewmap.ol-uncollapsible {
         if (layer) {
             return layer
         } else {
-            throw "Layer(" + id + ") Not Found"
+            return undefined
         }
       },
       getMapLayer: function (id) {

@@ -858,8 +858,12 @@
               var originFunc = tileSource.getTileUrlFunction()
               return function(time) {
                   tileSource.setTileUrlFunction(function(tileCoord,pixelRatio,projection){
-                      return originFunc(tileCoord,pixelRatio,projection) + "&time=" + time
-                  },tileSource.getUrls()[0] + "?time=" + time)
+                      if (time) {
+                          return originFunc(tileCoord,pixelRatio,projection) + "&time=" + time
+                      } else {
+                          return originFunc(tileCoord,pixelRatio,projection)
+                      }
+                  },time?(tileSource.getUrls()[0] + "?time=" + time):tileSource.getUrls()[0] )
               }
           }()
         }
@@ -883,11 +887,14 @@
       },
       initWFS : function(layer) {
         var params = null
+        var vm = this
         if (layer.type == "WFSLayer") {
           layer.wfs20 = layer.url + "?version=2.0.0&service=WFS&srsname=" + vm.env.srs + "&typeNames=" + layer.layerid
         } else {
           if (layer.wfsOptions) {
               layer.wfs20 = layer.wfsOptions.url + "?version=2.0.0&service=WFS&srsname=" + vm.env.srs + "&typeNames=" + layer.wfsOptions.layerid || layer.wfsOptions.id || layer.layerid
+          } else {
+              return
           }
         }
         layer.getWFSService = function() {
@@ -1333,7 +1340,7 @@
         // create a tile grid using the stock KMI resolutions
         var matrixSet = this.matrixSets[layer.params.matrixSet]
         var tileGrid = new ol.tilegrid.WMTS({
-          origin: matrixSet.extent.getTopLeft([-180, -90, 180, 90]),
+          origin: ol.extent.getTopLeft(matrixSet.extent),
           resolutions: this.resolutions,
           matrixIds: matrixSet.matrixIds,
           tileSize: matrixSet.tileSize
@@ -1395,7 +1402,8 @@
                       tileGrid: tileGrid
                     })
                     layer.timeline[event.target.get(event.key)][2].setTileLoadFunction(vm.tileLoaderHook(layer.timeline[event.target.get(event.key)][2], tileLayer))
-                    vm.setUrlTimestamp(layer.timeline[event.target.get(event.key)][2],moment.utc().unix())
+                    //vm.setUrlTimestamp(layer.timeline[event.target.get(event.key)][2],moment.utc().unix())
+                    vm.setUrlTimestamp(layer.timeline[event.target.get(event.key)][2],null)
                 }
                 tileLayer.setSource(layer.timeline[event.target.get(event.key)][2] )
 
@@ -1415,8 +1423,9 @@
                         if (layer.timeline.length > index && layer.timeline[index][2] && layer.timeline[index][1] === timelineLayer[1]) {
                             timelineLayer[2] = layer.timeline[index][2]
                             //clear browser cache and tile cache
-                            vm.setUrlTimestamp(timelineLayer[2],moment.utc().unix())
                             timelineLayer[2].tileCache.clear()
+                            //vm.setUrlTimestamp(timelineLayer[2],moment.utc().unix())
+                            vm.setUrlTimestamp(timelineLayer[2],null)
                         }
                     })
                 }
@@ -1475,27 +1484,27 @@
         if (layer.mapLayer) return layer.mapLayer
         var vm = this
 
-        layer.wmsOptions.params = $.extend({
+        layer.params = $.extend({
           opacity: 1,
           format: 'image/png',
           style: '',
-          srs: 'EPSG:4326',
-        }, layer.wmsOptions.params||{})
+          srs: vm.env.srs,
+        }, layer.params||{})
 
         // create a tile source
         var imgSource = new ol.source.ImageWMS({
-          url: layer.wmsOptions.url,
+          url: layer.url,
           crossOrigin :'use-credentials',
-          serverType:layer.wmsOptions.serverType || "geoserver",
+          serverType:layer.serverType || "geoserver",
           params:{
             LAYERS:layer.layerid,
-            styles:layer.wmsOptions.params.style
+            styles:layer.params.style
           },
-          projection: layer.wmsOptions.params.srs,
+          projection: layer.params.srs,
         })
 
         var imgLayer = new ol.layer.Image({
-          opacity: layer.wmsOptions.opacity || 1,
+          opacity: layer.opacity || 1,
           source: imgSource
         })
 
@@ -1514,7 +1523,7 @@
         }
 
         imgLayer.refresh = function() {
-            if (layer.wmsOptions.refresh) {
+            if (layer.refresh) {
                 imgLayer.set('updated', moment().toLocaleString())
                 vm.$root.active.refreshRevision += 1
             }
@@ -1529,7 +1538,7 @@
         imgLayer.layer = layer
         layer.mapLayer = imgLayer
 
-        if (options.lastUpdatetime) {
+        if (layer.lastUpdatetime) {
             imgLayer.set('updated',layer.lastUpdatetime)
         }
 
@@ -1538,14 +1547,14 @@
         }
 
         imgLayer.startAutoRefresh = function() {
-            vm._startAutoRefresh(this,layer.wmsOptions)
+            vm._startAutoRefresh(this,layer)
         }
 
         imgLayer.postAdd = function() {
             // if the "refresh" option is set, set a timer
             // to force a reload of the tile content
             this.startAutoRefresh()
-            if (layer.wmsOptions.refresh) {
+            if (layer.refresh) {
               imgLayer.set('updated', moment().toLocaleString())
               vm.$root.active.refreshRevision += 1
             }
@@ -2094,7 +2103,7 @@
       }
 
       this._startAutoRefresh = function(olLayer) {
-          if (options.refresh && !olLayer.autoRefresh ) {
+          if (olLayer.layer.refresh && !olLayer.autoRefresh ) {
               olLayer.autoRefresh = setInterval(function () {
                   olLayer.refresh()
               }, olLayer.layer.refresh * 1000)

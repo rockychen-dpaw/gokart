@@ -8,7 +8,7 @@
     },
     "opacity": 1,
     "timelineRefresh":300,
-    "fetchTimelineUrl":"/hi8/AHI_TKY_FHS?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "fetchTimelineUrl":"/hi8/AHI_TKY_FHS?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=false",
     "url": "/mapproxy/firewatch/service"
 },{
     "name": "Himawari-8 True Colour",
@@ -20,7 +20,7 @@
     },
     "opacity": 1,
     "timelineRefresh":300,
-    "fetchTimelineUrl":"/hi8/AHI_TKY_b321?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "fetchTimelineUrl":"/hi8/AHI_TKY_b321?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=false",
     "url": "/mapproxy/firewatch/service"
 },{
     "name": "Himawari-8 Band 7",
@@ -32,7 +32,7 @@
     },
     "opacity": 1,
     "timelineRefresh":300,
-    "fetchTimelineUrl":"/hi8/AHI_TKY_b7?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=true",
+    "fetchTimelineUrl":"/hi8/AHI_TKY_b7?getLayers=/mapproxy/firewatch/service%3Fservice%3Dwms%26request%3Dgetcapabilities&https_verify=false",
     "url": "/mapproxy/firewatch/service"
 }, {
    "name": "Forest Fire Danger Index",
@@ -102,7 +102,8 @@
    "minInterval":60,
    "maxInterval":600,
    "intervalStep":60,
-   "dependentLayers":["dpaw:bushfire_final_fireboundary_latest","dpaw:bushfire_final_fireboundary_latest"]
+   "dependentLayers":["dpaw:bushfire_final_fireboundary_latest","dpaw:bushfire_final_fireboundary_latest"],
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"Fire Boundary of Bushfire Final Report",
    "id": "dpaw:bushfire_final_fireboundary_latest",
@@ -113,7 +114,8 @@
        "format": "image/png",
        "matrixSet":"gda94",
        "style": ""
-   }
+   },
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/gwc/service/wmts"
 
 },{
    "name":"Fire Boundary of Selected Bushfire Final Report",
@@ -124,25 +126,26 @@
    "opacity": 1,
    "params": {
       "style":"dpaw:bushfire_final_fireboundary_latest.selected"
-   }
+   },
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wms"
 },{
    "name":"Resource Tracking",
    "id": "dpaw:resource_tracking_live",
    "layeid": "dpaw:resource_tracking_live",
    "type":"WFSLayer",
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs",
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs",
    "refresh":60
 },{
    "name":"Resource Tracking History",
    "id": "dpaw:resource_tracking_history",
    "type":"WFSLayer",
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"cddp:townsite_points",
    "id": "cddp:townsite_points",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 
 },{
    "name":"legislated_lands_and_waters",
@@ -150,35 +153,46 @@
    "layerid":"cddp:legislated_lands_and_waters",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"state_forest_plantation_distribution",
    "id": "state_forest_plantation_distribution",
    "layerid":"cddp:state_forest_plantation_distribution",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"dept_interest_lands_and_waters",
    "id": "dept_interest_lands_and_waters",
    "layerid":"cddp:dept_interest_lands_and_waters",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"other_tenures",
    "id": "other_tenures",
    "layerid":"cddp:other_tenures",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 },{
    "name":"sa_nt_burntarea",
    "id": "sa_nt_burntarea",
    "layerid":"cddp:sa_nt_state_polygons_burntarea",
    "type":"WFSLayer",
    "listLayer":false,
-   "url": "https://kmi.dpaw.wa.gov.au/geoserver/wfs"
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/wfs"
 
+}, {
+   "name": "mapbox-outdoors",
+   "id": "dbca:mapbox-outdoors",
+   "type": "WMTSLayer",
+    "opacity": 1,
+    "params":{
+      "format": "image/png",
+      "matrixSet":"gda94",
+      "style": ""
+    },
+   "url": "https://kmi.dbca.wa.gov.au/geoserver/gwc/service/wmts"
 }]
 

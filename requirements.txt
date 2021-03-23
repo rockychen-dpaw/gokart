@@ -9,7 +9,7 @@ pytz>=2016.4
 requests==2.22.0
 uWSGI==2.0.18
 boto3==1.4.7
-pytesseract>=0.1.6
+pytesseract==0.1.6
 Pillow>=4.0.0
 GDAL==2.1.0
 affine==2.1.0
